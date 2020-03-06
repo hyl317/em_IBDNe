@@ -14,10 +14,12 @@ def binning(ibdLenList):
 
     for i in range(num_bins):
         bin_low, bin_high = min+i*BIN_SIZE, min+(i+1)*BIN_SIZE
-        bins[i] = np.sum(ibdLens[ibdLens >= bin_low and ibdLens < bin_high])
-        bin_midPoint = (bin_low+bin_high)/2
-    
-    return bins, bin_midPoint 
+        bins[i] = np.count_nonzero((ibdLens >= bin_low) & (ibdLens < bin_high))
+        bin_midPoint[i] = (bin_low+bin_high)/2
+    bins_trimmed = bins[bins != 0]
+    bin_midPoint_trimmed = bin_midPoint[bins != 0]
+    print(np.sum(bins_trimmed))
+    return bins_trimmed, bin_midPoint_trimmed 
 
 def processIBD(ibd_gz, end_marker):
     endMarker = {}
@@ -35,7 +37,7 @@ def processIBD(ibd_gz, end_marker):
 
     ibdLen1 = [] #store length of IBDs that reside in the middle of a chromosome
     ibdLen2 = [] #store length of IBDs that reaches either end of a chromosome
-    with gzip.open(ibd_gz, 'rf') as ibd:
+    with gzip.open(ibd_gz, 'rt') as ibd:
         line = ibd.readline()
         while line:
             ind1, hap1, ind2, hap2, chr, start_bp, end_bp, len_cM = line.strip().split('\t')
