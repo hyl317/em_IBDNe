@@ -91,8 +91,8 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
 
     N_updated[:maxGen-1] = (1+np.exp(logB-logA))/2
     tck = interpolate.splrep(np.arange(1, maxGen), N_updated[:maxGen-1])
-    #N_updated[maxGen-1] = interpolate.splev(maxGen, tck)
-    N_updated = interpolate.splev(np.arange(1, maxGen+1), tck)
+    N_updated[maxGen-1] = interpolate.splev(maxGen, tck)
+    #N_updated = interpolate.splev(np.arange(1, maxGen+1), tck)
     print(N_updated)
 
     return N_updated
