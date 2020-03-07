@@ -64,9 +64,9 @@ def eStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
 def cumulative_logsumexp(array):
     N = len(array)
     cumsum = np.zeros(N)
-    cumsum[0] = np.log(array[0])
+    cumsum[0] = array[0]
     for i in range(1, N):
-        cumsum[i] = np.logddexp(cumsum[i-1], array[i])
+        cumsum[i] = np.logaddexp(cumsum[i-1], array[i])
     return cumsum
 
 
@@ -76,17 +76,17 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     maxGen = len(N)
     N_updated = np.zeros(maxGen)
     #calculate N through 1,2,..., G-1
-    sum_over_every_column1 = np.apply_along_axis(logsumexp, 0, T1[:-1])
-    sum_over_every_column2 = np.apply_along_axis(logsumexp, 0, T2[:-1])
-    A = np.logaddexp(sum_over_every_column1, sum_over_every_column2)
-    
-    temp1 = cumulative_logsumexp(np.fliplr(sum_over_every_column1.reshape(1, maxGen-1)).flatten())
-    cum_sum_to_the_right1 = np.fliplr(temp1.reshape(1, len(temp1))).flatten()[:-1]
-    temp2 = cumulative_logsumexp(np.fliplr(sum_over_every_column2.reshape(1, maxGen-1)).flatten())
-    cum_sum_to_the_right2 = np.fliplr(temp2.reshape(1, len(temp2))).flatten()[:-1]
+    sum_over_every_column1 = np.apply_along_axis(logsumexp, 0, T1)
+    sum_over_every_column2 = np.apply_along_axis(logsumexp, 0, T2)
+    A = np.logaddexp(sum_over_every_column1, sum_over_every_column2)[:-2]
+    #print(f'shape of sum_over_column is {sum_over_every_column1.shape}')
+    temp1 = cumulative_logsumexp(np.fliplr(sum_over_every_column1.reshape(1, maxGen+1)).flatten())
+    cum_sum_to_the_right1 = np.fliplr(temp1.reshape(1, len(temp1))).flatten()[:-2]
+    temp2 = cumulative_logsumexp(np.fliplr(sum_over_every_column2.reshape(1, maxGen+1)).flatten())
+    cum_sum_to_the_right2 = np.fliplr(temp2.reshape(1, len(temp2))).flatten()[:-2]
     B = np.logaddexp(cum_sum_to_the_right1, cum_sum_to_the_right2)
 
-    N_updated[:maxGen-1] = (1+np.exp(A)/np.exp(B))/2
+    N_updated[:maxGen-1] = (1+np.exp(B)/np.exp(A))/2
     print(N_updated)
 
 
@@ -98,14 +98,14 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
 
 def em(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, tol, maxIter):
     N, T1, T2 = initializeN(maxGen), initializeT(bin1.shape[0], maxGen), initializeT(bin2.shape[0], maxGen)
-
+    print(f"initial N:{N}")
     loglike_prev = logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
     T1, T2 = eStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
-    print(np.exp(T1))
-    print(np.exp(T2))
+    #print(np.exp(T1))
+    #print(np.exp(T2))
     N = mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
     loglike_curr = logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
-    num_Iter = 1
+    num_iter = 1
 
     while (loglike_curr - loglike_prev >= tol and num_iter <= maxIter):
         loglike_prev = loglike_curr
@@ -113,10 +113,13 @@ def em(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, tol, maxIter):
         N = mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
         loglike_curr = logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
         num_iter += 1
+        print(f'iteration{num_iter} done.')
 
+    print(N)
+    print(T1)
+    print(T2)
     if loglike_curr - loglike_prev >= tol:
         print('Warning: EM did not converge. Stopped after {max_Iter} iterations.')
-
     return N, T1, T2
 
 
