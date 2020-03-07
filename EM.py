@@ -20,16 +20,36 @@ def initializeT(numBins, maxGen):
 
 def logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #calculate and return the log likelihood of the complete data
+    sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))
+    G = len(N)
+    #for IBD segments in the middle of a chromosome, calculate the prob of coalescing earlier than G generations in the past
+    alpha1 = bin_midPoint1/50 #this is a vector
+    beta1 = 1-1/(2*N[-1]) #this is just a scalar
+    temp1 = 1-beta1*np.exp(-alpha1)
+    last_col_1 = sum_log_prob_not_coalesce[-1] + np.log(1-beta1) - alpha1*(1 + G) - np.log(2500) + np.log(G**2/temp1 + (2*G-1)/temp1**2 + 2/temp1**3)
 
+    ##for IBD segments that reach either end of a chromosome, calculate the prob of coalescing earlier than G generations in the past
+    alpha2 = bin_midPoint2/50
+    beta2 = 1-1/(2*N[-1])
+    temp2 = 1-beta2*np.exp(-alpha2)
+    last_col_2 = sum_log_prob_not_coalesce[-1] + np.log(1-beta2) - alpha2*(1 + G) - np.log(50) + np.log(G/temp2 + 1/temp2**2)
 
-    
+    #calculate, for each bin, the IBD segments coalesce at 1,2,...,G generations in the past
+    log_g_over_50 = np.arange(1, G+1) - np.log(50)
+    log_2_times_N_g = np.log(2*N)
+    len_times_g_over_50_1 = bin_midPoint1.reshape((len(bin_midPoint1),1))@(np.arange(1, G+1).reshape((1, G)))
+    len_times_g_over_50_2 = bin_midPoint2.reshape((len(bin_midPoint2),1))@(np.arange(1, G+1).reshape((1, G)))
 
-    return
+    T1 = 2*log_g_over_50 - len_times_g_over_50_1 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
+    T2 = log_g_over_50 - len_times_g_over_50_2 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
+    T1 = np.append(T1, last_col_1[:,np.newaxis], axis=1)
+    T2 = np.append(T2, last_col_2[:, np.newaxis], axis=1)
+    return bin1*np.apply_along_axis(logsumexp, 1, T1) + bin2*np.apply_along_axis(logsumexp, 1, T2)
 
 def eStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))
-    print(sum_log_prob_not_coalesce.shape)
+    #print(sum_log_prob_not_coalesce.shape)
     G = len(N)
     #calculate last column of T1 (unnormalized)
     alpha1 = bin_midPoint1/50 #this is a vector
@@ -109,8 +129,9 @@ def em(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, tol, maxIter):
     N = mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
     loglike_curr = logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
     num_iter = 1
+    plotPosterior(T1, bin_midPoint1, np.arange(1, maxGen), title=f'Posterior Distribution for Iteration {num_iter}')
 
-    while (num_iter <= maxIter):
+    while (loglike_curr - loglike_prev <= tol and num_iter <= maxIter):
         print(f'iteration{num_iter} done.')
         loglike_prev = loglike_curr
         T1, T2 = eStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
@@ -121,8 +142,6 @@ def em(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, tol, maxIter):
     print(N)
     print(np.exp(T1))
     print(np.exp(T2))
-    print(np.sum(np.exp(T1), axis=1))
-    print(np.sum(np.exp(T2), axis=1))
     if loglike_curr - loglike_prev >= tol:
         print('Warning: EM did not converge. Stopped after {max_Iter} iterations.')
     return N, T1, T2
