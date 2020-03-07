@@ -10,7 +10,7 @@ def initializeN(maxGen):
     ar = np.array([1, -phi])
     MU, sigma = math.log(10000), math.log(10000)/10 
     #specify a AR(1) model, by default the mean 0 since it's a stationary time series
-    N = sm.tsa.arma_generate_sample(ar, np.array([1]), maxGen+1, scale=math.sqrt(1-phi**2)*sigma)
+    N = sm.tsa.arma_generate_sample(ar, np.array([1]), maxGen, scale=math.sqrt(1-phi**2)*sigma)
     return np.exp(N + MU) #now N has mean 10,000
 
 def initializeT(numBins, maxGen):
@@ -27,9 +27,9 @@ def logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
 
 def eStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
-    sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N[:-1])), 0, 0))
+    sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N), 0, 0)))
     print(sum_log_prob_not_coalesce.shape)
-    G = len(N)-1
+    G = len(N)
     #calculate last column of T1 (unnormalized)
     alpha1 = bin_midPoint1/50 #this is a vector
     beta1 = 1-1/(2*N[-1]) #this is just a scalar
@@ -44,7 +44,7 @@ def eStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
 
     #calculate the rest of the column
     log_g_over_50 = np.arange(1, G+1) - np.log(50)
-    log_2_times_N_g = np.log(2*N[:-1])
+    log_2_times_N_g = np.log(2*N)
     len_times_g_over_50_1 = bin_midPoint1.reshape((len(bin_midPoint1),1))@(np.arange(1, G+1).reshape((1, G)))
     len_times_g_over_50_2 = bin_midPoint2.reshape((len(bin_midPoint2),1))@(np.arange(1, G+1).reshape((1, G)))
 
