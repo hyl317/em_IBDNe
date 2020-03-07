@@ -27,7 +27,7 @@ def logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
 
 def eStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
-    sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N), 0, 0)))
+    sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))
     print(sum_log_prob_not_coalesce.shape)
     G = len(N)
     #calculate last column of T1 (unnormalized)
