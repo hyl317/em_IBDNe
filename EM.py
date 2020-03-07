@@ -4,6 +4,7 @@ import math
 import statsmodels.api as sm
 from scipy.special import logsumexp
 from scipy import interpolate
+from plotting import *
 
 def initializeN(maxGen):
     #initialize N, the population size trajectory
@@ -44,7 +45,7 @@ def logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     T2 = log_g_over_50 - len_times_g_over_50_2 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
     T1 = np.append(T1, last_col_1[:,np.newaxis], axis=1)
     T2 = np.append(T2, last_col_2[:, np.newaxis], axis=1)
-    return bin1*np.apply_along_axis(logsumexp, 1, T1) + bin2*np.apply_along_axis(logsumexp, 1, T2)
+    return np.sum(bin1*np.apply_along_axis(logsumexp, 1, T1)) + np.sum(bin2*np.apply_along_axis(logsumexp, 1, T2))
 
 def eStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
@@ -129,21 +130,22 @@ def em(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, tol, maxIter):
     N = mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
     loglike_curr = logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
     num_iter = 1
-    plotPosterior(T1, bin_midPoint1, np.arange(1, maxGen), title=f'Posterior Distribution for Iteration {num_iter}')
-
-    while (loglike_curr - loglike_prev <= tol and num_iter <= maxIter):
-        print(f'iteration{num_iter} done.')
+    plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+2), title=f'Posterior Distribution for Iteration {num_iter}')
+    #print(f'first itertaion loglikelihood diff: {loglike_curr-loglike_prev}')
+    while (loglike_curr - loglike_prev >= tol and num_iter <= maxIter):
+        print(f'iteration{num_iter} done. Likelihood imporved by {loglike_curr-loglike_prev}')
         loglike_prev = loglike_curr
         T1, T2 = eStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
         N = mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
         loglike_curr = logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
         num_iter += 1
+        plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+2), title=f'Posterior Distribution for Iteration {num_iter}')
         
     print(N)
     print(np.exp(T1))
     print(np.exp(T2))
     if loglike_curr - loglike_prev >= tol:
-        print('Warning: EM did not converge. Stopped after {max_Iter} iterations.')
+        print(f'Warning: EM did not converge. Stopped after {maxIter} iterations.')
     return N, T1, T2
 
 
