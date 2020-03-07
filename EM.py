@@ -61,8 +61,37 @@ def eStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     T2 = T2 - normalizing_constant2
     return T1, T2
 
+def cumulative_logsumexp(array):
+    N = len(array)
+    cumsum = np.zeros(N)
+    cumsum[0] = np.log(array[0])
+    for i in range(1, N):
+        cumsum[i] = np.logddexp(cumsum[i-1], array[i])
+    return cumsum
+
+
+
 def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return the updated N estimate, and current loglikelihood
+    maxGen = len(N)
+    N_updated = np.zeros(maxGen)
+    #calculate N through 1,2,..., G-1
+    sum_over_every_column1 = np.apply_along_axis(logsumexp, 0, T1[:-1])
+    sum_over_every_column2 = np.apply_along_axis(logsumexp, 0, T2[:-1])
+    A = np.logaddexp(sum_over_every_column1, sum_over_every_column2)
+    
+    temp1 = cumulative_logsumexp(np.fliplr(sum_over_every_column1.reshape(1, maxGen-1)).flatten())
+    cum_sum_to_the_right1 = np.fliplr(temp1.reshape(1, len(temp1))).flatten()[:-1]
+    temp2 = cumulative_logsumexp(np.fliplr(sum_over_every_column2.reshape(1, maxGen-1)).flatten())
+    cum_sum_to_the_right2 = np.fliplr(temp2.reshape(1, len(temp2))).flatten()[:-1]
+    B = np.logaddexp(cum_sum_to_the_right1, cum_sum_to_the_right2)
+
+    N_updated[:maxGen-1] = (1+np.exp(A)/np.exp(B))/2
+    print(N_updated)
+
+
+
+
     return
 
 
