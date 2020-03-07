@@ -81,15 +81,15 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     T2 = np.log(bin2)[:,np.newaxis] + T2
     sum_over_every_column1 = np.apply_along_axis(logsumexp, 0, T1)
     sum_over_every_column2 = np.apply_along_axis(logsumexp, 0, T2)
-    A = np.logaddexp(sum_over_every_column1, sum_over_every_column2)[:-2]
+    logA = np.logaddexp(sum_over_every_column1, sum_over_every_column2)[:-2]
     #print(f'shape of sum_over_column is {sum_over_every_column1.shape}')
     temp1 = np.logaddexp.accumulate(np.fliplr(sum_over_every_column1.reshape(1, maxGen+1)).flatten())
     cum_sum_to_the_right1 = np.fliplr(temp1.reshape(1, len(temp1))).flatten()[1:-1]
     temp2 = np.logaddexp.accumulate(np.fliplr(sum_over_every_column2.reshape(1, maxGen+1)).flatten())
     cum_sum_to_the_right2 = np.fliplr(temp2.reshape(1, len(temp2))).flatten()[1:-1]
-    B = np.logaddexp(cum_sum_to_the_right1, cum_sum_to_the_right2)
+    logB = np.logaddexp(cum_sum_to_the_right1, cum_sum_to_the_right2)
 
-    N_updated[:maxGen-1] = (1+np.exp(B-A))/2
+    N_updated[:maxGen-1] = (1+np.exp(logB-logA))/2
     tck = interpolate.splrep(np.arange(1, maxGen), N_updated[:maxGen-1])
     #N_updated[maxGen-1] = interpolate.splev(maxGen, tck)
     N_updated = interpolate.splev(np.arange(1, maxGen+1), tck)
