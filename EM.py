@@ -15,7 +15,11 @@ def initializeN(maxGen):
     N = sm.tsa.arma_generate_sample(ar, np.array([1]), maxGen, scale=math.sqrt(1-phi**2)*sigma)
     return np.exp(N + MU) #now N has mean 10,000
 
-def initializeT(numBins, maxGen):
+def initializeT_uniform(numBins, maxGen):
+    T = np.full((numBins, maxGen+1), np.log(1/(maxGen+1)))
+    return T
+
+def initializeT_random(numBins, maxGen):
     T = np.random.rand(numBins, maxGen+1)
     return T/T.sum(axis=1)[:, np.newaxis]
 
@@ -121,7 +125,7 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
 
 
 def em(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, tol, maxIter):
-    N, T1, T2 = initializeN(maxGen), initializeT(bin1.shape[0], maxGen), initializeT(bin2.shape[0], maxGen)
+    N, T1, T2 = initializeN(maxGen), initializeT_uniform(bin1.shape[0], maxGen), initializeT(bin2.shape[0], maxGen)
     print(f"initial N:{N}")
     loglike_prev = logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
     T1, T2 = eStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
