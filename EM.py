@@ -3,6 +3,7 @@ import numpy as np
 import math
 import statsmodels.api as sm
 from scipy.special import logsumexp
+from scipy import interpolate
 
 def initializeN(maxGen):
     #initialize N, the population size trajectory
@@ -87,6 +88,9 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     B = np.logaddexp(cum_sum_to_the_right1, cum_sum_to_the_right2)
 
     N_updated[:maxGen-1] = (1+np.exp(B)/np.exp(A))/2
+    tck = interpolate.splrep(np.arange(1, maxGen), N_updated[:maxGen-1])
+    N_updated[maxGen-1] = interpolate.splev(maxGen, tck)
+    #N_updated = interpolate.splev(np.arange(1, maxGen+1), tck)
     print(N_updated)
 
 
@@ -108,13 +112,13 @@ def em(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, tol, maxIter):
     num_iter = 1
 
     while (loglike_curr - loglike_prev >= tol and num_iter <= maxIter):
+        print(f'iteration{num_iter} done.')
         loglike_prev = loglike_curr
         T1, T2 = eStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
         N = mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
         loglike_curr = logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
         num_iter += 1
-        print(f'iteration{num_iter} done.')
-
+        
     print(N)
     print(T1)
     print(T2)
