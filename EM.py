@@ -10,16 +10,16 @@ def initializeN(maxGen):
     #initialize N, the population size trajectory
     phi = 0.98
     ar = np.array([1, -phi])
-    MU, sigma = math.log(10000), math.log(10000)/10 
+    MU, sigma = math.log(10000), math.log(10000)/100 
     #specify a AR(1) model, by default the mean 0 since it's a stationary time series
     N = sm.tsa.arma_generate_sample(ar, np.array([1]), maxGen, scale=math.sqrt(1-phi**2)*sigma)
     return np.exp(N + MU) #now N has mean 10,000
 
-def initializeT_uniform(numBins, maxGen):
+def initializeT_Uniform(numBins, maxGen):
     T = np.full((numBins, maxGen+1), np.log(1/(maxGen+1)))
     return T
 
-def initializeT_random(numBins, maxGen):
+def initializeT_Random(numBins, maxGen):
     T = np.random.rand(numBins, maxGen+1)
     return T/T.sum(axis=1)[:, np.newaxis]
 
@@ -42,8 +42,8 @@ def logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #calculate, for each bin, the IBD segments coalesce at 1,2,...,G generations in the past
     log_g_over_50 = np.arange(1, G+1) - np.log(50)
     log_2_times_N_g = np.log(2*N)
-    len_times_g_over_50_1 = bin_midPoint1.reshape((len(bin_midPoint1),1))@(np.arange(1, G+1).reshape((1, G)))
-    len_times_g_over_50_2 = bin_midPoint2.reshape((len(bin_midPoint2),1))@(np.arange(1, G+1).reshape((1, G)))
+    len_times_g_over_50_1 = bin_midPoint1.reshape((len(bin_midPoint1),1))@(np.arange(1, G+1).reshape((1, G)))/50
+    len_times_g_over_50_2 = bin_midPoint2.reshape((len(bin_midPoint2),1))@(np.arange(1, G+1).reshape((1, G)))/50
 
     T1 = 2*log_g_over_50 - len_times_g_over_50_1 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
     T2 = log_g_over_50 - len_times_g_over_50_2 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
@@ -71,8 +71,8 @@ def eStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #calculate the rest of the column
     log_g_over_50 = np.arange(1, G+1) - np.log(50)
     log_2_times_N_g = np.log(2*N)
-    len_times_g_over_50_1 = bin_midPoint1.reshape((len(bin_midPoint1),1))@(np.arange(1, G+1).reshape((1, G)))
-    len_times_g_over_50_2 = bin_midPoint2.reshape((len(bin_midPoint2),1))@(np.arange(1, G+1).reshape((1, G)))
+    len_times_g_over_50_1 = bin_midPoint1.reshape((len(bin_midPoint1),1))@(np.arange(1, G+1).reshape((1, G)))/50
+    len_times_g_over_50_2 = bin_midPoint2.reshape((len(bin_midPoint2),1))@(np.arange(1, G+1).reshape((1, G)))/50
 
     T1 = 2*log_g_over_50 - len_times_g_over_50_1 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
     T2 = log_g_over_50 - len_times_g_over_50_2 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
@@ -98,7 +98,7 @@ def cumulative_logsumexp(array):
 
 
 def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
-    #return the updated N estimate, and current loglikelihood
+    #return the updated N estimate
     maxGen = len(N)
     N_updated = np.zeros(maxGen)
     #calculate N through 1,2,..., G-1
@@ -115,18 +115,21 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     logB = np.logaddexp(cum_sum_to_the_right1, cum_sum_to_the_right2)
 
     N_updated[:maxGen-1] = (1+np.exp(logB-logA))/2
-    tck = interpolate.splrep(np.arange(1, maxGen), N_updated[:maxGen-1])
-    N_updated[maxGen-1] = interpolate.splev(maxGen, tck)
+    #tck = interpolate.splrep(np.arange(1, maxGen), N_updated[:maxGen-1])
+    #N_updated[maxGen-1] = interpolate.splev(maxGen, tck)
+    N_updated[maxGen-1] = N_updated[maxGen-2]
+    #tck = interpolate.splrep(np.arange(1, maxGen+1), N_updated)
     #N_updated = interpolate.splev(np.arange(1, maxGen+1), tck)
-    print(N_updated)
+    #print(N_updated)
 
     return N_updated
 
 
 
 def em(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, tol, maxIter):
-    N, T1, T2 = initializeN(maxGen), initializeT_uniform(bin1.shape[0], maxGen), initializeT(bin2.shape[0], maxGen)
+    N, T1, T2 = initializeN(maxGen), initializeT_Random(bin1.shape[0], maxGen), initializeT_Random(bin2.shape[0], maxGen)
     print(f"initial N:{N}")
+    plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+2), title='initial')
     loglike_prev = logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
     T1, T2 = eStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
     #print(np.exp(T1))
@@ -136,15 +139,17 @@ def em(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, tol, maxIter):
     num_iter = 1
     plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+2), title=f'Posterior Distribution for Iteration {num_iter}')
     #print(f'first itertaion loglikelihood diff: {loglike_curr-loglike_prev}')
-    while (loglike_curr - loglike_prev >= tol and num_iter <= maxIter):
-        print(f'iteration{num_iter} done. Likelihood imporved by {loglike_curr-loglike_prev}')
+    while (loglike_curr - loglike_prev >= tol and num_iter < maxIter):
+        print(f'iteration{num_iter} done. Likelihood improved by {loglike_curr-loglike_prev}')
         loglike_prev = loglike_curr
         T1, T2 = eStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
         N = mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
         loglike_curr = logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
         num_iter += 1
-        plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+2), title=f'Posterior Distribution for Iteration {num_iter}')
-        
+        #plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+2), title=f'Posterior Distribution for Iteration {num_iter}')
+    
+    print(f'iteration{num_iter} done. Likelihood improved by {loglike_curr-loglike_prev}')
+    plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+2), title=f'Posterior Distribution for Iteration {num_iter}')    
     print(N)
     print(np.exp(T1))
     print(np.exp(T2))
