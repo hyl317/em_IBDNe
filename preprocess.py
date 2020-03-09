@@ -21,17 +21,20 @@ def binning(ibdLenList):
     return bins_trimmed, bin_midPoint_trimmed 
 
 def processIBD(ibd_gz, end_marker):
-    endMarker = {}
+    endMarker_bp = {}
+    endMarker_cM = {}
 
     with open(end_marker) as end:
         line = end.readline()
         while line:
             chr, rate, cM, phy = line.strip().split('\t')
-            chr, phy = int(chr), int(phy)
-            if not chr in endMarker:
-                endMarker[chr] = [phy]
+            chr, cM, phy = int(chr), float(cM), int(phy)
+            if not chr in endMarker_bp:
+                endMarker_bp[chr] = [phy]
+                endMarker_cM[chr] = [cM]
             else:
-                endMarker[chr].append(phy)
+                endMarker_bp[chr].append(phy)
+                endMarker_cM[chr].append(cM)
             line = end.readline()
 
     ibdLen1 = [] #store length of IBDs that reside in the middle of a chromosome
@@ -41,7 +44,7 @@ def processIBD(ibd_gz, end_marker):
         while line:
             ind1, hap1, ind2, hap2, chr, start_bp, end_bp, len_cM = line.strip().split('\t')
             chr, start_bp, end_bp, len_cM = int(chr), int(start_bp), int(end_bp), float(len_cM)
-            if start_bp in endMarker[chr] or end_bp in endMarker[chr]:
+            if start_bp in endMarker_bp[chr] or end_bp in endMarker_bp[chr]:
                 ibdLen2.append(len_cM)
             else:
                 ibdLen1.append(len_cM)
@@ -53,7 +56,7 @@ def processIBD(ibd_gz, end_marker):
 
     #return a vector of lengths (in cM) of each chromosome
     chr_len_cM = []
-    for chr, start_end in endMarker.items():
+    for chr, start_end in endMarker_cM.items():
         chr_len_cM.append(abs(start_end[1]-start_end[0]))
 
     return bin1, bin2, bin_midPoint1, bin_midPoint2, np.array(chr_len_cM)

@@ -10,7 +10,7 @@ def initializeN(maxGen):
     #initialize N, the population size trajectory
     phi = 0.98
     ar = np.array([1, -phi])
-    MU, sigma = math.log(10000), math.log(10000)/100 
+    MU, sigma = math.log(10000), math.log(10000)/10
     #specify a AR(1) model, by default the mean 0 since it's a stationary time series
     N = sm.tsa.arma_generate_sample(ar, np.array([1]), maxGen, scale=math.sqrt(1-phi**2)*sigma)
     return np.exp(N + MU) #now N has mean 10,000

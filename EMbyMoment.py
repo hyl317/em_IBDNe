@@ -1,10 +1,14 @@
 from EM import initializeN
 from scipy.special import logsumexp
+import numpy as np
+from plotting import *
+from scipy.interpolate import UnivariateSpline
+
 
 NUM_INDS = 1000
 C = 2
 
-def initializeT_Random(num_bins, maxGen):
+def initializeT_Random(numBins, maxGen):
     T = np.random.rand(numBins, maxGen)
     return T/T.sum(axis=1)[:, np.newaxis]
 
@@ -37,60 +41,65 @@ def updatePosterior(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #this is still log of unnormalized probabilities
     #is normalization necessary?
     normalizing_constant1 = np.logaddexp(np.apply_along_axis(logsumexp, 1, T1)[:,np.newaxis], last_col_1[:, np.newaxis])
-    normalizing_constant2 = np.logaddexp(np.apply_along_axis(logsumexp, 1, T2)[:,np.newaxis], last_col_2[:, np:newaxis])
+    normalizing_constant2 = np.logaddexp(np.apply_along_axis(logsumexp, 1, T2)[:,np.newaxis], last_col_2[:, np.newaxis])
     T1 = T1 - normalizing_constant1
     T2 = T2 - normalizing_constant2
+    #print(np.sum(np.exp(T1),axis=1))
+    #print(np.sum(np.exp(T2),axis=1))
     return T1, T2
 
-def updateN(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N):
+def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N):
     log_total_len_each_bin1 = np.log(bin1) + np.log(bin_midPoint1)
     log_total_len_each_bin2 = np.log(bin2) + np.log(bin_midPoint2)
-    log_expected_ibd_len_each_gen1 = np.apply_along_axis(logsumexp, 0, T1+total_len_each_bin1[:,np.newaxis])
-    log_expected_ibd_len_each_gen2 = np.apply_along_axis(logsumexp, 0, T2+total_len_each_bin2[:,np.newaxis])
-    total_expected_ibd_len_each_gen = np.logaddexp(log_expected_ibd_len_each_gen1, log_expected_ibd_len_each_gen2)
+    log_expected_ibd_len_each_gen1 = np.apply_along_axis(logsumexp, 0, T1 + log_total_len_each_bin1[:,np.newaxis])
+    log_expected_ibd_len_each_gen2 = np.apply_along_axis(logsumexp, 0, T2 + log_total_len_each_bin2[:,np.newaxis])
+    log_total_expected_ibd_len_each_gen = np.logaddexp(log_expected_ibd_len_each_gen1, log_expected_ibd_len_each_gen2)
 
     gen = np.arange(1, maxGen+1)
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
     log_numerator = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
-    N_updated = np.exp(log_numerator - total_expected_ibd_len_each_gen)
-
+    N_updated = np.exp(log_numerator - log_total_expected_ibd_len_each_gen)
+    print(f'N_updated before smoothing{N_updated}')
+    #spl = UnivariateSpline(np.arange(1, maxGen+1), N_updated, s=10)
+    #N_updated = spl(np.arange(1, maxGen+1))
+    #print(f'N_updated after smoothing{N_updated}')
+    return N_updated
 
 
 def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, tol, maxIter):
     N, T1, T2 = initializeN(maxGen), initializeT_Random(bin1.shape[0], maxGen), initializeT_Random(bin2.shape[0], maxGen)
     print(f"initial N:{N}")
-    plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+2), title='initial')
+    plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+1), title='initial')
 
     #pre-calculate log of term3 in the updateN step
     #this quantity is a constant in all iterations
     #so is more efficient to calculate here, save as a local variable, and pass it onto future iterations
     n_p = (2*NUM_INDS)*(2*NUM_INDS-2)/2
+    print(chr_len_cM)
     chr_len_cM = chr_len_cM[:,np.newaxis]
-    gen = np.arange(1, maxGen)
+    gen = np.arange(1, maxGen+1).reshape((1, maxGen))
     log_term3 = np.log(np.sum(C*(chr_len_cM@gen)/50 + chr_len_cM - ((C**2)*gen)/50, axis=0))
 
     #data preprocessing done. Start EM.
     N_prev = N
     T1, T2 = updatePosterior(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
-    N = updateN(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N)
+    N = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N)
     N_curr = N
     num_iter = 1
     diff = N_curr - N_prev
     dist = diff.dot(diff)
-    print(f'iteration{num_iter} done. Diff:{dist}')
-    plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+2), title=f'Posterior Distribution for Iteration {num_iter}')
+    plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+1), title=f'Posterior Distribution for Iteration {num_iter}')
 
     while ( dist >= tol and num_iter < maxIter):
         print(f'iteration{num_iter} done. Diff:{dist}')
         N_prev = N_curr
         T1, T2 = updatePosterior(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
-        N = updateN(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term_3, N)
+        N = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N)
         N_curr = N
         diff = N_curr - N_prev
         dist = diff.dot(diff)
         num_iter += 1
     
     print(f'iteration{num_iter} done.')
-    plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+2), title=f'Posterior Distribution for Iteration {num_iter}')    
-    print(N)
+    plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+1), title=f'Posterior Distribution for Iteration {num_iter}')    
     return N, T1, T2
