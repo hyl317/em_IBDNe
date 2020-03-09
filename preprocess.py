@@ -18,7 +18,6 @@ def binning(ibdLenList):
         bin_midPoint[i] = (bin_low+bin_high)/2
     bins_trimmed = bins[bins != 0]
     bin_midPoint_trimmed = bin_midPoint[bins != 0]
-    print(np.sum(bins_trimmed))
     return bins_trimmed, bin_midPoint_trimmed 
 
 def processIBD(ibd_gz, end_marker):
@@ -51,4 +50,10 @@ def processIBD(ibd_gz, end_marker):
     #calculate bins
     bin1, bin_midPoint1 = binning(ibdLen1)
     bin2, bin_midPoint2 = binning(ibdLen2)
-    return bin1, bin2, bin_midPoint1, bin_midPoint2
+
+    #return a vector of lengths (in cM) of each chromosome
+    chr_len_cM = []
+    for chr, start_end in endMarker.items():
+        chr_len_cM.append(abs(start_end[1]-start_end[0]))
+
+    return bin1, bin2, bin_midPoint1, bin_midPoint2, np.array(chr_len_cM)
