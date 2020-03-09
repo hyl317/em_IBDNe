@@ -120,7 +120,7 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     N_updated[maxGen-1] = N_updated[maxGen-2]
     #tck = interpolate.splrep(np.arange(1, maxGen+1), N_updated)
     #N_updated = interpolate.splev(np.arange(1, maxGen+1), tck)
-    #print(N_updated)
+    print(N_updated)
 
     return N_updated
 

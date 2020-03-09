@@ -3,7 +3,7 @@ from scipy.special import logsumexp
 import numpy as np
 from plotting import *
 from scipy.interpolate import UnivariateSpline
-
+from csaps import csaps
 
 NUM_INDS = 1000
 C = 2
@@ -58,12 +58,12 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     gen = np.arange(1, maxGen+1)
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
     log_numerator = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
-    N_updated = np.exp(log_numerator - log_total_expected_ibd_len_each_gen)
-    print(f'N_updated before smoothing{N_updated}')
+    log_N_updated = log_numerator - log_total_expected_ibd_len_each_gen
+    print(f'N_updated before smoothing{np.exp(log_N_updated)}')
     #spl = UnivariateSpline(np.arange(1, maxGen+1), N_updated, s=10)
-    #N_updated = spl(np.arange(1, maxGen+1))
-    #print(f'N_updated after smoothing{N_updated}')
-    return N_updated
+    log_N_updated = csaps(gen, log_N_updated, gen, smooth=0.2)
+    print(f'after smoothing:{np.exp(log_N_updated)}')
+    return np.exp(log_N_updated)
 
 
 def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, tol, maxIter):
