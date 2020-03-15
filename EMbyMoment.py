@@ -82,9 +82,8 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
 
 
 def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, tol, maxIter):
-    N, T1, T2 = initializeN(maxGen), initializeT_Random(bin1.shape[0], maxGen), initializeT_Random(bin2.shape[0], maxGen)
+    N, T1, T2 = refFinNe(), initializeT_Random(bin1.shape[0], maxGen), initializeT_Random(bin2.shape[0], maxGen)
     print(f"initial N:{N}")
-    plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+1), title='initial')
 
     #pre-calculate log of term3 in the updateN step
     #this quantity is a constant in all iterations
