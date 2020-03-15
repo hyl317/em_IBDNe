@@ -103,14 +103,14 @@ def fit_exp_curve(log_numerator, log_denominator, interval=10):
     #print(TOTAL_NUM_INTERVALS)
     for i in range(2, TOTAL_NUM_INTERVALS+1):
         #calculate the interval [maxGen-i*interval, maxGen-(i-1)*interval)
-        Xs = np.exp(log_denominator[maxGen-i*interval:maxGen-(i-1)*interval])
         Ys = np.exp(log_numerator[maxGen-i*interval:maxGen-(i-1)*interval])
+        Xs = np.exp(log_denominator[maxGen-i*interval:maxGen-(i-1)*interval])
         prev = final_N[maxGen-(i-1)*interval]
         r = newton(fn, Dfn, 0, 1e-4, 100, Xs, Ys, prev, interval)
-        print(Xs)
         print(Ys)
+        print(Xs)
         if r == None:
-            final_N[maxGen-i*interval:max-(i-1)*interval] = Xs/Ys
+            final_N[maxGen-i*interval:maxGen-(i-1)*interval] = Ys/Xs
         else:
             final_N[maxGen-i*interval:maxGen-(i-1)*interval] = prev*np.exp(r*np.arange(1, interval+1,1))
     return final_N
