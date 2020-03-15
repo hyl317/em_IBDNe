@@ -77,6 +77,8 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     log_numerator = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
     
     final_N = fit_exp_curve(log_numerator, log_total_expected_ibd_len_each_gen)
+    print(final_N)
+    return final_N
     #log_N_updated = log_numerator - log_total_expected_ibd_len_each_gen
     #return np.exp(log_N_updated)
 
@@ -97,14 +99,20 @@ def fit_exp_curve(log_numerator, log_denominator, interval=10):
     N = np.exp(logsumexp(log_numerator[maxGen-interval:]) - logsumexp(log_denominator[maxGen-interval:]))
     final_N[maxGen-interval:] = N
 
-    TOTAL_NUM_INTERVALS = maxGen/interval
+    TOTAL_NUM_INTERVALS = int(maxGen/interval)
+    #print(TOTAL_NUM_INTERVALS)
     for i in range(2, TOTAL_NUM_INTERVALS+1):
         #calculate the interval [maxGen-i*interval, maxGen-(i-1)*interval)
-        Xs = np.exp(log_denominator[maxGen-i*interval, maxGen-(i-1)*interval])
-        Ys = np.exp(log_numerator[maxGen-i*interval, maxGen-(i-1)*interval])
+        Xs = np.exp(log_denominator[maxGen-i*interval:maxGen-(i-1)*interval])
+        Ys = np.exp(log_numerator[maxGen-i*interval:maxGen-(i-1)*interval])
         prev = final_N[maxGen-(i-1)*interval]
         r = newton(fn, Dfn, 0, 1e-4, 100, Xs, Ys, prev, interval)
-        final_N[maxGen-i*interval, maxGen-(i-1)*interval] = prev*np.exp(r*np.arange(1, interval+1,1))
+        print(Xs)
+        print(Ys)
+        if r == None:
+            final_N[maxGen-i*interval:max-(i-1)*interval] = Xs/Ys
+        else:
+            final_N[maxGen-i*interval:maxGen-(i-1)*interval] = prev*np.exp(r*np.arange(1, interval+1,1))
     return final_N
 
 
@@ -117,7 +125,7 @@ def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, to
     #this quantity is a constant in all iterations
     #so is more efficient to calculate here, save as a local variable, and pass it onto future iterations
     n_p = (2*NUM_INDS)*(2*NUM_INDS-2)/2
-    print(chr_len_cM)
+    #print(chr_len_cM)
     chr_len_cM = chr_len_cM[:,np.newaxis]
     gen = np.arange(1, maxGen+1).reshape((1, maxGen))
     log_term3 = np.log(np.sum(C*(chr_len_cM@gen)/50 + chr_len_cM - ((C**2)*gen)/50, axis=0))
