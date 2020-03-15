@@ -109,7 +109,7 @@ def fit_exp_curve(log_numerator, log_denominator, interval=10):
         r = newton(fn, Dfn, 0, 1e-4, 100, Xs, Ys, prev, interval)
         print(Ys)
         print(Xs)
-        if r == None:
+        if r == None or abs(r) >= 2:
             final_N[maxGen-i*interval:maxGen-(i-1)*interval] = Ys/Xs
         else:
             final_N[maxGen-i*interval:maxGen-(i-1)*interval] = prev*np.exp(r*np.arange(1, interval+1,1))
