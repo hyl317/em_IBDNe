@@ -4,7 +4,7 @@ import numpy as np
 from plotting import *
 from misc import *
 #from scipy.interpolate import UnivariateSpline
-#from csaps import csaps
+from csaps import csaps
 
 
 NUM_INDS = 1000
@@ -113,6 +113,8 @@ def fit_exp_curve(log_numerator, log_denominator, interval=10):
             final_N[maxGen-i*interval:maxGen-(i-1)*interval] = Ys/Xs
         else:
             final_N[maxGen-i*interval:maxGen-(i-1)*interval] = prev*np.exp(r*np.arange(1, interval+1,1))
+    
+    final_N = csaps(np.arange(1, maxGen+1), final_N, np.arange(1, maxGen+1), smooth=0.8)
     return final_N
 
 
