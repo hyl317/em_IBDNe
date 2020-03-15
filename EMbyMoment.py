@@ -2,8 +2,10 @@ from EM import initializeN
 from scipy.special import logsumexp
 import numpy as np
 from plotting import *
-from scipy.interpolate import UnivariateSpline
-from csaps import csaps
+from misc import *
+#from scipy.interpolate import UnivariateSpline
+#from csaps import csaps
+
 
 NUM_INDS = 1000
 C = 2
@@ -73,16 +75,42 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     gen = np.arange(1, maxGen+1)
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
     log_numerator = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
-    log_N_updated = log_numerator - log_total_expected_ibd_len_each_gen
-    print(f'N_updated before smoothing{np.exp(log_N_updated)}')
-    #spl = UnivariateSpline(np.arange(1, maxGen+1), N_updated, s=10)
-    log_N_updated = csaps(gen, log_N_updated, gen, smooth=0.2)
-    print(f'after smoothing:{np.exp(log_N_updated)}')
-    return np.exp(log_N_updated)
+    
+    final_N = fit_exp_curve(log_numerator, log_total_expected_ibd_len_each_gen)
+    #log_N_updated = log_numerator - log_total_expected_ibd_len_each_gen
+    #return np.exp(log_N_updated)
+
+def fn(r, X, Y, prev, interval):
+    exponent = np.arange(-interval,0,1)
+    return np.sum(X)-np.sum(Y*np.exp(r*exponent))/prev
+
+def Dfn(r, X, Y, prev, interval):
+    exponent = np.arange(-interval,0,1)
+    return -np.sum(exponent*np.exp(r*exponent)*Y)/prev
+
+
+def fit_exp_curve(log_numerator, log_denominator, interval=10):
+    #for the last interval, assume a constant Ne
+    assert len(log_numerator) == len(log_denominator)
+    maxGen = len(log_numerator)
+    final_N = np.zeros(maxGen)
+    N = np.exp(logsumexp(log_numerator[maxGen-interval:]) - logsumexp(log_denominator[maxGen-interval:]))
+    final_N[maxGen-interval:] = N
+
+    TOTAL_NUM_INTERVALS = maxGen/interval
+    for i in range(2, TOTAL_NUM_INTERVALS+1):
+        #calculate the interval [maxGen-i*interval, maxGen-(i-1)*interval)
+        Xs = np.exp(log_denominator[maxGen-i*interval, maxGen-(i-1)*interval])
+        Ys = np.exp(log_numerator[maxGen-i*interval, maxGen-(i-1)*interval])
+        prev = final_N[maxGen-(i-1)*interval]
+        r = newton(fn, Dfn, 0, 1e-4, 100, Xs, Ys, prev, interval)
+        final_N[maxGen-i*interval, maxGen-(i-1)*interval] = prev*np.exp(r*np.arange(1, interval+1,1))
+    return final_N
+
 
 
 def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, tol, maxIter):
-    N, T1, T2 = refFinNe(), initializeT_Random(bin1.shape[0], maxGen), initializeT_Random(bin2.shape[0], maxGen)
+    N, T1, T2 = initializeN(maxGen), initializeT_Random(bin1.shape[0], maxGen), initializeT_Random(bin2.shape[0], maxGen)
     print(f"initial N:{N}")
 
     #pre-calculate log of term3 in the updateN step
