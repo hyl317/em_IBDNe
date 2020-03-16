@@ -9,6 +9,11 @@ def add_diploid_sites(vcf, samples):
     Read the sites in the vcf and add them to the samples object, reordering the
     alleles to put the ancestral allele first, if it is available.
     """
+
+    for sample in vcf.samples:
+        print(sample)
+        samples.add_individual(ploidy=2, metadata={'name':sample})
+
     pos = 0
     for variant in vcf:  # Loop over variants, each assumed at a unique site
         if pos == variant.POS:
