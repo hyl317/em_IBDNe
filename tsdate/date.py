@@ -39,8 +39,7 @@ def main():
     args = parser.parse_args()
 
     vcf = cyvcf2.VCF(args.vcf)
-    with tsinfer.SampleData(path=f"{args.vcf}.samples",
-                        sequence_length=chromosome_length(vcf)) as samples:
+    with tsinfer.SampleData(path=f"{args.vcf}.samples") as samples:
         add_diploid_sites(vcf, samples)
 
     print("Sample file created for {} samples ".format(samples.num_samples) +
@@ -51,4 +50,7 @@ def main():
     ts = tsinfer.infer(samples)
     print("Inferred tree sequence: {} trees over {} Mb ({} edges)".format(
         ts.num_trees, ts.sequence_length/1e6, ts.num_edges))
+
+if __name__ == '__main__':
+    main()
 
