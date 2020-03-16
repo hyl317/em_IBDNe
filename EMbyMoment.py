@@ -32,7 +32,7 @@ def initializeT_Random(numBins, maxGen):
 def updatePosterior(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))
-
+    print(sum_log_prob_not_coalesce)
     G = len(N)
     #calculate log probability of coalescing earlier than maxGen for T1
     alpha1 = bin_midPoint1/50 #this is a vector
@@ -106,15 +106,20 @@ def fit_exp_curve(log_numerator, log_denominator, interval=10):
         Ys = np.exp(log_numerator[maxGen-i*interval:maxGen-(i-1)*interval])
         Xs = np.exp(log_denominator[maxGen-i*interval:maxGen-(i-1)*interval])
         prev = final_N[maxGen-(i-1)*interval]
-        r = newton(fn, Dfn, 0, 1e-4, 100, Xs, Ys, prev, interval)
-        print(Ys)
-        print(Xs)
+        r = newton(fn, Dfn, 0, 1e-4, 200, Xs, Ys, prev, interval)
+        print(f'prev is {prev}')
+        #print(Ys)
+        #print(Xs)
         if r == None or abs(r) >= 2:
+            if r != None:
+                print(f'r={r}')
             final_N[maxGen-i*interval:maxGen-(i-1)*interval] = Ys/Xs
         else:
-            final_N[maxGen-i*interval:maxGen-(i-1)*interval] = prev*np.exp(r*np.arange(1, interval+1,1))
+            print(f'r={r}')
+            print(np.exp(r*np.arange(interval,0,-1)))
+            final_N[maxGen-i*interval:maxGen-(i-1)*interval] = prev*np.exp(r*np.arange(interval,0,-1))
     
-    final_N = csaps(np.arange(1, maxGen+1), final_N, np.arange(1, maxGen+1), smooth=0.8)
+    #final_N = csaps(np.arange(0, maxGen), final_N, np.arange(0, maxGen), smooth=0.8)
     return final_N
 
 
@@ -136,6 +141,7 @@ def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, to
     N_prev = N
     T1, T2 = updatePosterior(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
     N = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N)
+    #T1, T2 = updatePosterior(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
     N_curr = N
     num_iter = 1
     diff = N_curr - N_prev
