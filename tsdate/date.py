@@ -36,6 +36,10 @@ def main():
     parser = argparse.ArgumentParser(description='Use tsdate to infer node age')
     parser.add_argument('-v', action="store", dest="vcf", type=str, required=True, 
                         help='Path to VCF File')
+    parser.add_argument('-N', action="store", dest="Ne", type=float, required=False, default=10000,
+                        help="Effective Population Size. Default is 10,000")
+    parser.add_argument('--mu', action="store", dest="mu", type=float, required=False, default=1e-8,
+                        help="Mutation rate. Default is 1e-8.")
     args = parser.parse_args()
 
     vcf = cyvcf2.VCF(args.vcf)
@@ -46,10 +50,15 @@ def main():
         "({} individuals) ".format(samples.num_individuals) +
         "with {} variable sites.".format(samples.num_sites), flush=True)
 
-    # Do the inference
-    ts = tsinfer.infer(samples)
+    # Do tsinfer 
+    inferred_ts = tsinfer.infer(samples)
     print("Inferred tree sequence: {} trees over {} Mb ({} edges)".format(
-        ts.num_trees, ts.sequence_length/1e6, ts.num_edges))
+        inferred_ts.num_trees, inferred_ts.sequence_length/1e6, inferred_ts.num_edges), flush=True)
+
+    # Do tsdate
+    dated_ts = tsdate.date(inferred_ts, Ne=args.Ne, mutation_rate=args.mu)
+    dated_ts.dump(f'{args.v}.dated.ts')
+
 
 if __name__ == '__main__':
     main()
