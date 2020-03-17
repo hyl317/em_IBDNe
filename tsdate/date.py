@@ -11,7 +11,7 @@ def add_diploid_sites(vcf, samples):
     """
 
     for sample in vcf.samples:
-        print(sample)
+        #print(sample)
         samples.add_individual(ploidy=2, metadata={'name':sample})
 
     pos = 0
@@ -61,8 +61,8 @@ def main():
         inferred_ts.num_trees, inferred_ts.sequence_length/1e6, inferred_ts.num_edges), flush=True)
 
     # Do tsdate
-    dated_ts = tsdate.date(inferred_ts, Ne=args.Ne, mutation_rate=args.mu)
-    dated_ts.dump(f'{args.v}.dated.ts')
+    dated_ts = tsdate.date(inferred_ts, Ne=args.Ne, mutation_rate=args.mu, progress=True)
+    dated_ts.dump(f'{args.vcf}.dated.ts')
 
 
 if __name__ == '__main__':

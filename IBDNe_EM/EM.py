@@ -6,7 +6,7 @@ from scipy.special import logsumexp
 from scipy import interpolate
 from plotting import *
 
-def initializeN(maxGen):
+def initializeN_autoreg(maxGen):
     #initialize N, the population size trajectory
     phi = 0.98
     ar = np.array([1, -phi])
