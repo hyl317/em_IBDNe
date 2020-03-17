@@ -10,24 +10,24 @@ from csaps import csaps
 NUM_INDS = 1000
 C = 2
 
-def refFinNe():
-    growth_rate1 = 0.0247
-    growth_rate2 = 0.182
-    N_0 = 1000
-    N_curr = N_0
-    N = [N_0]
-    for g in np.arange(99, 0, -1):
-        if g >= 13:
-            N_curr = N_curr*(np.exp(growth_rate1))
-        else:
-            N_curr = N_curr*(np.exp(growth_rate2))
-        N.insert(0, N_curr)
-    return np.array(N)
+#def refFinNe():
+#    growth_rate1 = 0.0247
+#    growth_rate2 = 0.182
+#    N_0 = 1000
+#    N_curr = N_0
+#    N = [N_0]
+#    for g in np.arange(99, 0, -1):
+#        if g >= 13:
+#            N_curr = N_curr*(np.exp(growth_rate1))
+#        else:
+#            N_curr = N_curr*(np.exp(growth_rate2))
+#        N.insert(0, N_curr)
+#    return np.array(N)
 
 
-def initializeT_Random(numBins, maxGen):
-    T = np.random.rand(numBins, maxGen)
-    return T/T.sum(axis=1)[:, np.newaxis]
+#def initializeT_Random(numBins, maxGen):
+#    T = np.random.rand(numBins, maxGen)
+#    return T/T.sum(axis=1)[:, np.newaxis]
 
 def updatePosterior(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
@@ -61,8 +61,6 @@ def updatePosterior(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     normalizing_constant2 = np.logaddexp(np.apply_along_axis(logsumexp, 1, T2)[:,np.newaxis], last_col_2[:, np.newaxis])
     T1 = T1 - normalizing_constant1
     T2 = T2 - normalizing_constant2
-    #print(np.sum(np.exp(T1),axis=1))
-    #print(np.sum(np.exp(T2),axis=1))
     return T1, T2
 
 def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N):
@@ -77,7 +75,6 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     log_numerator = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
     
     final_N = fit_exp_curve(log_numerator, log_total_expected_ibd_len_each_gen)
-    print(final_N)
     return final_N
     #log_N_updated = log_numerator - log_total_expected_ibd_len_each_gen
     #return np.exp(log_N_updated)
@@ -107,16 +104,9 @@ def fit_exp_curve(log_numerator, log_denominator, interval=10):
         Xs = np.exp(log_denominator[maxGen-i*interval:maxGen-(i-1)*interval])
         prev = final_N[maxGen-(i-1)*interval]
         r = newton(fn, Dfn, 0, 1e-4, 200, Xs, Ys, prev, interval)
-        print(f'prev is {prev}')
-        #print(Ys)
-        #print(Xs)
         if r == None or abs(r) >= 2:
-            if r != None:
-                print(f'r={r}')
             final_N[maxGen-i*interval:maxGen-(i-1)*interval] = Ys/Xs
         else:
-            print(f'r={r}')
-            print(np.exp(r*np.arange(interval,0,-1)))
             final_N[maxGen-i*interval:maxGen-(i-1)*interval] = prev*np.exp(r*np.arange(interval,0,-1))
     
     #final_N = csaps(np.arange(0, maxGen), final_N, np.arange(0, maxGen), smooth=0.8)
@@ -146,7 +136,7 @@ def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, to
     num_iter = 1
     diff = N_curr - N_prev
     dist = diff.dot(diff)
-    plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+1), title=f'Posterior Distribution for Iteration {num_iter}')
+    #plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+1), title=f'Posterior Distribution for Iteration {num_iter}')
 
     while ( dist >= tol and num_iter < maxIter):
         print(f'iteration{num_iter} done. Diff:{dist}')

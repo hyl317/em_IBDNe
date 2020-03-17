@@ -25,6 +25,11 @@ def main():
     print(f'Among them, {np.sum(bin2)} reach chromosome end.')
     #N, T1, T2 = em(args.maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, args.tol, args.maxIter)
     N, T1, T2 = em_byMoment(args.maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, args.tol, args.maxIter)
+    
+    with open('ibdne.txt','w') as out:
+        for g, ne in enumerate(N):
+            out.write(f'{g+1}\t{ne}\n')
+
 
 if __name__ == '__main__':
     main()
