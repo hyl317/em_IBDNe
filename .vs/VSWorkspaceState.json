@@ -1,7 +1,8 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\IBDNe_EM"
   ],
-  "SelectedNode": "\\preprocess.py",
+  "SelectedNode": "\\IBDNe_EM\\em_IBDNe.py",
   "PreviewInSolutionExplorer": false
 }
