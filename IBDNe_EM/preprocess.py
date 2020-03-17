@@ -39,14 +39,14 @@ def processIBD(ibd_gz, end_marker):
 
     ibdLen1 = [] #store length of IBDs that reside in the middle of a chromosome
     ibdLen2 = [] #store length of IBDs that reaches either end of a chromosome
-    inds = []
+    inds = set()
     with gzip.open(ibd_gz, 'rt') as ibd:
         line = ibd.readline()
         while line:
             ind1, hap1, ind2, hap2, chr, start_bp, end_bp, len_cM = line.strip().split('\t')
             chr, start_bp, end_bp, len_cM = int(chr), int(start_bp), int(end_bp), float(len_cM)
-            inds.append(ind1)
-            inds.append(ind2)
+            inds.add(ind1)
+            inds.add(ind2)
             if start_bp in endMarker_bp[chr] or end_bp in endMarker_bp[chr]:
                 ibdLen2.append(len_cM)
             else:
@@ -56,7 +56,6 @@ def processIBD(ibd_gz, end_marker):
     #calculate bins
     bin1, bin_midPoint1 = binning(ibdLen1)
     bin2, bin_midPoint2 = binning(ibdLen2)
-    inds = set(inds)
 
     #return a vector of lengths (in cM) of each chromosome
     chr_len_cM = []
