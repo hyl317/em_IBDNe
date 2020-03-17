@@ -28,27 +28,27 @@ def logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     sum_log_prob_coalesce = sum_log_prob_not_coalesce - np.log(2*N)
     G = len(N)
     ##for IBD segments in the middle of a chromosome, calculate the prob of coalescing earlier than G generations in the past
-    #alpha1 = bin_midPoint1/50 #this is a vector
-    #beta1 = 1-1/(2*N[-1]) #this is just a scalar
-    #temp1 = 1-beta1*np.exp(-alpha1)
-    #last_col_1 = sum_log_prob_not_coalesce[-1] + np.log(1-beta1) - alpha1*(1 + G) - np.log(2500) + np.log(G**2/temp1 + (2*G-1)/temp1**2 + 2/temp1**3)
+    alpha1 = bin_midPoint1/50 #this is a vector
+    beta1 = 1-1/(2*N[-1]) #this is just a scalar
+    temp1 = 1-beta1*np.exp(-alpha1)
+    last_col_1 = sum_log_prob_not_coalesce[-1] + np.log(1-beta1) - alpha1*(1 + G) - np.log(2500) + np.log(G**2/temp1 + (2*G-1)/temp1**2 + 2/temp1**3)
 
     ###for IBD segments that reach either end of a chromosome, calculate the prob of coalescing earlier than G generations in the past
-    #alpha2 = bin_midPoint2/50
-    #beta2 = 1-1/(2*N[-1])
-    #temp2 = 1-beta2*np.exp(-alpha2)
-    #last_col_2 = sum_log_prob_not_coalesce[-1] + np.log(1-beta2) - alpha2*(1 + G) - np.log(50) + np.log(G/temp2 + 1/temp2**2)
+    alpha2 = bin_midPoint2/50
+    beta2 = 1-1/(2*N[-1])
+    temp2 = 1-beta2*np.exp(-alpha2)
+    last_col_2 = sum_log_prob_not_coalesce[-1] + np.log(1-beta2) - alpha2*(1 + G) - np.log(50) + np.log(G/temp2 + 1/temp2**2)
 
     ##calculate, for each bin, the IBD segments coalesce at 1,2,...,G generations in the past
-    #log_g_over_50 = np.log(np.arange(1, G+1)/50)
-    #log_2_times_N_g = np.log(2*N)
-    #len_times_g_over_50_1 = bin_midPoint1.reshape((len(bin_midPoint1),1))@(np.arange(1, G+1).reshape((1, G)))/50
-    #len_times_g_over_50_2 = bin_midPoint2.reshape((len(bin_midPoint2),1))@(np.arange(1, G+1).reshape((1, G)))/50
+    log_g_over_50 = np.log(np.arange(1, G+1)/50)
+    log_2_times_N_g = np.log(2*N)
+    len_times_g_over_50_1 = bin_midPoint1.reshape((len(bin_midPoint1),1))@(np.arange(1, G+1).reshape((1, G)))/50
+    len_times_g_over_50_2 = bin_midPoint2.reshape((len(bin_midPoint2),1))@(np.arange(1, G+1).reshape((1, G)))/50
 
-    #T1 = 2*log_g_over_50 - len_times_g_over_50_1 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
-    #T2 = log_g_over_50 - len_times_g_over_50_2 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
-    #T1 = np.append(T1, last_col_1[:,np.newaxis], axis=1)
-    #T2 = np.append(T2, last_col_2[:, np.newaxis], axis=1)
+    T1 = 2*log_g_over_50 - len_times_g_over_50_1 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
+    T2 = log_g_over_50 - len_times_g_over_50_2 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
+    T1 = np.append(T1, last_col_1[:,np.newaxis], axis=1)
+    T2 = np.append(T2, last_col_2[:,np.newaxis], axis=1)
     return np.sum(bin1*np.apply_along_axis(logsumexp, 1, T1)) + np.sum(bin2*np.apply_along_axis(logsumexp, 1, T2))
 
 def eStep(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
@@ -87,15 +87,6 @@ def eStep(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     T2 = T2 - normalizing_constant2
     return T1, T2
 
-def cumulative_logsumexp(array):
-    N = len(array)
-    cumsum = np.zeros(N)
-    cumsum[0] = array[0]
-    for i in range(1, N):
-        cumsum[i] = np.logaddexp(cumsum[i-1], array[i])
-    return cumsum
-
-
 
 def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return the updated N estimate
@@ -107,7 +98,6 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     sum_over_every_column1 = np.apply_along_axis(logsumexp, 0, T1)
     sum_over_every_column2 = np.apply_along_axis(logsumexp, 0, T2)
     logA = np.logaddexp(sum_over_every_column1, sum_over_every_column2)[:-2]
-    #print(f'shape of sum_over_column is {sum_over_every_column1.shape}')
     temp1 = np.logaddexp.accumulate(np.fliplr(sum_over_every_column1.reshape(1, maxGen+1)).flatten())
     cum_sum_to_the_right1 = np.fliplr(temp1.reshape(1, len(temp1))).flatten()[1:-1]
     temp2 = np.logaddexp.accumulate(np.fliplr(sum_over_every_column2.reshape(1, maxGen+1)).flatten())
