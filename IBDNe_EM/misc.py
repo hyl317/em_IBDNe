@@ -29,12 +29,12 @@ def newton(f,Df,x0,epsilon,max_iter, X, Y, prev, interval):
     for n in range(0,max_iter):
         fxn = f(xn, X, Y, prev, interval)
         if abs(fxn) < epsilon:
-            print('Found solution after',n,'iterations.')
+            #print('Found solution after',n,'iterations.')
             return xn
         Dfxn = Df(xn, X, Y, prev, interval)
         if Dfxn == 0:
-            print('Zero derivative. No solution found.')
+            #print('Zero derivative. No solution found.')
             return None
         xn = xn - fxn/Dfxn
-    print('Exceeded maximum iterations. No solution found.')
+    #print('Exceeded maximum iterations. No solution found.')
     return None

@@ -47,7 +47,7 @@ def refFinNe():
 def updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))
-    print(sum_log_prob_not_coalesce)
+    #print(sum_log_prob_not_coalesce)
     G = len(N)
     #calculate log probability of coalescing earlier than maxGen for T1
     alpha1 = bin_midPoint1/50 #this is a vector
@@ -89,10 +89,12 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
     log_numerator = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
     
-    final_N = fit_exp_curve(log_numerator, log_total_expected_ibd_len_each_gen)
-    return final_N
-    #log_N_updated = log_numerator - log_total_expected_ibd_len_each_gen
+    #final_N = fit_exp_curve(log_numerator, log_total_expected_ibd_len_each_gen)
+    #return final_N
+    log_N_updated = log_numerator - log_total_expected_ibd_len_each_gen
+    final_N = csaps(np.arange(0, maxGen), np.exp(log_N_updated), np.arange(0, maxGen), smooth=0.8)    
     #return np.exp(log_N_updated)
+    return final_N
 
 def fn(r, X, Y, prev, interval):
     exponent = np.arange(-interval,0,1)
@@ -141,7 +143,7 @@ def testExpectation(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2):
 
 def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, tol, maxIter):
     #N = initializeN_autoreg(maxGen)
-    testExpectation(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2)
+    #testExpectation(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2)
     N = initializeN_autoreg(maxGen)
     print(f"initial N:{N}")
 
