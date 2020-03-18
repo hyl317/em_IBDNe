@@ -3,6 +3,7 @@ import numpy as np
 import math
 import statsmodels.api as sm
 from scipy.special import logsumexp
+from scipy.optimize import minimize
 from plotting import *
 
 def initializeN_autoreg(maxGen):
@@ -48,7 +49,14 @@ def logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     T2 = log_g_over_50 - len_times_g_over_50_2 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
     T1 = np.append(T1, last_col_1[:,np.newaxis], axis=1)
     T2 = np.append(T2, last_col_2[:,np.newaxis], axis=1)
-    return np.sum(bin1*np.apply_along_axis(logsumexp, 1, T1)) + np.sum(bin2*np.apply_along_axis(logsumexp, 1, T2))
+
+    ## add penalty term to the log likelihood
+    N_shifted = np.roll(N,-1)
+    N_shifted[-1] = N[-1]
+    diff = N_shifted - N
+    penalty = 0.05*np.sum(np.dot(diff, diff))
+
+    return np.sum(bin1*np.apply_along_axis(logsumexp, 1, T1)) + np.sum(bin2*np.apply_along_axis(logsumexp, 1, T2)) + penalty
 
 def eStep(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
@@ -88,23 +96,24 @@ def eStep(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
 
 
 def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
-    #return the updated N estimate
-    maxGen = len(N)
-    N_updated = np.zeros(maxGen)
-    #calculate N through 1,2,..., G-1
-    T1 = np.log(bin1)[:,np.newaxis] + T1
-    T2 = np.log(bin2)[:,np.newaxis] + T2
-    sum_over_every_column1 = np.apply_along_axis(logsumexp, 0, T1)
-    sum_over_every_column2 = np.apply_along_axis(logsumexp, 0, T2)
-    logA = np.logaddexp(sum_over_every_column1, sum_over_every_column2)[:-2]
-    temp1 = np.logaddexp.accumulate(np.fliplr(sum_over_every_column1.reshape(1, maxGen+1)).flatten())
-    cum_sum_to_the_right1 = np.fliplr(temp1.reshape(1, len(temp1))).flatten()[1:-1]
-    temp2 = np.logaddexp.accumulate(np.fliplr(sum_over_every_column2.reshape(1, maxGen+1)).flatten())
-    cum_sum_to_the_right2 = np.fliplr(temp2.reshape(1, len(temp2))).flatten()[1:-1]
-    logB = np.logaddexp(cum_sum_to_the_right1, cum_sum_to_the_right2)
+    N_updated = minimize(logLike, N, args=(T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2), method='L-BFGS-B')
+    ##return the updated N estimate
+    #maxGen = len(N)
+    #N_updated = np.zeros(maxGen)
+    ##calculate N through 1,2,..., G-1
+    #T1 = np.log(bin1)[:,np.newaxis] + T1
+    #T2 = np.log(bin2)[:,np.newaxis] + T2
+    #sum_over_every_column1 = np.apply_along_axis(logsumexp, 0, T1)
+    #sum_over_every_column2 = np.apply_along_axis(logsumexp, 0, T2)
+    #logA = np.logaddexp(sum_over_every_column1, sum_over_every_column2)[:-2]
+    #temp1 = np.logaddexp.accumulate(np.fliplr(sum_over_every_column1.reshape(1, maxGen+1)).flatten())
+    #cum_sum_to_the_right1 = np.fliplr(temp1.reshape(1, len(temp1))).flatten()[1:-1]
+    #temp2 = np.logaddexp.accumulate(np.fliplr(sum_over_every_column2.reshape(1, maxGen+1)).flatten())
+    #cum_sum_to_the_right2 = np.fliplr(temp2.reshape(1, len(temp2))).flatten()[1:-1]
+    #logB = np.logaddexp(cum_sum_to_the_right1, cum_sum_to_the_right2)
 
-    N_updated[:maxGen-1] = (1+np.exp(logB-logA))/2
-    N_updated[maxGen-1] = N_updated[maxGen-2]
+    #N_updated[:maxGen-1] = (1+np.exp(logB-logA))/2
+    #N_updated[maxGen-1] = N_updated[maxGen-2]
     print(f'N updated:{N_updated}')
     return N_updated
 
