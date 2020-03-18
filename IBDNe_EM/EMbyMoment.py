@@ -165,7 +165,7 @@ def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, nu
     num_iter = 1
     diff = N_curr - N_prev
     dist = diff.dot(diff)
-    #plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+1), title=f'Posterior Distribution for Iteration {num_iter}')
+    plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+1), title=f'Posterior Distribution for Iteration {num_iter}')
 
     while ( dist >= tol and num_iter < maxIter):
         print(f'iteration{num_iter} done. Diff:{dist}')

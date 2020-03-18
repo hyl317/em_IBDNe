@@ -118,7 +118,7 @@ def em(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, tol, maxIter):
     N = mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
     loglike_curr = logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
     num_iter = 1
-    #plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+2), title=f'Posterior Distribution for Iteration {num_iter}')
+    plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+2), title=f'Posterior Distribution for Iteration {num_iter}')
     while (loglike_curr - loglike_prev >= tol and num_iter < maxIter):
         print(f'iteration{num_iter} done. Likelihood improved by {loglike_curr-loglike_prev}')
         loglike_prev = loglike_curr
