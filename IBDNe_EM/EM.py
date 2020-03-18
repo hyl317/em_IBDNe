@@ -105,6 +105,7 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
 
     N_updated[:maxGen-1] = (1+np.exp(logB-logA))/2
     N_updated[maxGen-1] = N_updated[maxGen-2]
+    print(f'N updated:{N_updated}')
     return N_updated
 
 
