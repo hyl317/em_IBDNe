@@ -56,7 +56,7 @@ def logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, alpha):
     diff = N_shifted - N
     penalty = alpha*np.sum(np.dot(diff, diff))
 
-    return np.sum(bin1*np.apply_along_axis(logsumexp, 1, T1)) + np.sum(bin2*np.apply_along_axis(logsumexp, 1, T2)) + penalty
+    return -np.sum(bin1*np.apply_along_axis(logsumexp, 1, T1)) - np.sum(bin2*np.apply_along_axis(logsumexp, 1, T2)) + penalty
 
 def eStep(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
@@ -95,6 +95,7 @@ def eStep(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     return T1, T2
 
 def jacobian(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, alpha):
+    maxGen = len(N)
     T1 = np.log(bin1)[:,np.newaxis] + T1
     T2 = np.log(bin2)[:,np.newaxis] + T2
     sum_over_every_column1 = np.apply_along_axis(logsumexp, 0, T1)
@@ -112,12 +113,12 @@ def jacobian(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, alpha):
     N_right = np.roll(N,1)
     N_right[0] = 0
     penalty_term = 4*N - 2*(N_left + N_right)
-    return likelihood_term + alpha*penalty_term
+    return -np.exp(likelihood_term) - alpha*penalty_term
 
 
 def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, alpha):
     bnds = [(0, np.inf) for n in N]
-    N_updated = minimize(logLike, N, args=(T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, alpha), method='L-BFGS-B', tol=1e-6, bounds=bnds, jac=jacobian)
+    result = minimize(logLike, N, args=(T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, alpha), method='L-BFGS-B', tol=1e-6, bounds=bnds, jac=jacobian)
     ##return the updated N estimate
     #maxGen = len(N)
     #N_updated = np.zeros(maxGen)
@@ -135,8 +136,8 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, alpha):
 
     #N_updated[:maxGen-1] = (1+np.exp(logB-logA))/2
     #N_updated[maxGen-1] = N_updated[maxGen-2]
-    print(f'N updated:{N_updated}')
-    return N_updated
+    print(f'N updated:{result}')
+    return result.x
 
 
 
@@ -144,10 +145,10 @@ def em(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, tol, maxIter):
     alpha = 0.05
     N, T1, T2 = initializeN_autoreg(maxGen), initializeT_Random(bin1.shape[0], maxGen), initializeT_Random(bin2.shape[0], maxGen)
     print(f"initial N:{N}")
-    loglike_prev = logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, alpha)
+    loglike_prev = -logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, alpha)
     T1, T2 = eStep(N, bin1, bin2, bin_midPoint1, bin_midPoint2)
     N = mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, alpha)
-    loglike_curr = logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, alpha)
+    loglike_curr = -logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, alpha)
     num_iter = 1
     plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+2), title=f'Posterior Distribution for Iteration {num_iter}')
     while (loglike_curr - loglike_prev >= tol and num_iter < maxIter):
@@ -155,7 +156,7 @@ def em(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, tol, maxIter):
         loglike_prev = loglike_curr
         T1, T2 = eStep(N, bin1, bin2, bin_midPoint1, bin_midPoint2)
         N = mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, alpha)
-        loglike_curr = logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, alpha)
+        loglike_curr = -logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, alpha)
         num_iter += 1
     
     print(f'iteration{num_iter} done. Likelihood improved by {loglike_curr-loglike_prev}')
