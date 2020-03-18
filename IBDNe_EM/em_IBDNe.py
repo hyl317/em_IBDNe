@@ -23,7 +23,7 @@ def main():
     bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds = processIBD(args.ibdSeg, args.end)
     print(f'A total of {np.sum(bin1)+np.sum(bin2)} IBD segments read for {numInds} individuals.')
     print(f'Among them, {np.sum(bin2)} reach chromosome end.')
-    N, T1, T2 = em(args.maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, args.tol, args.maxIter)
+    N, T1, T2 = em(args.maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, numInds, args.tol, args.maxIter)
     #N, T1, T2 = em_byMoment(args.maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, args.tol, args.maxIter)
     
     with open('ibdne.txt','w') as out:
