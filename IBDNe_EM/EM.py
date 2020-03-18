@@ -115,6 +115,21 @@ def negCompleteDataLikelihood(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint
 
     matrix1 = 2*log_g_over_50 - len_times_g_over_50_1 + sum_log_prob_not_coalesce[:-1] - log_2_times_N_g
     matrix2 = log_g_over_50 - len_times_g_over_50_2 + sum_log_prob_not_coalesce[:-1] - log_2_times_N_g
+
+    #calculate last column of T1 (unnormalized)
+    alpha1 = bin_midPoint1/50 #this is a vector
+    beta1 = 1-1/(2*N[-1]) #this is just a scalar
+    temp1 = 1-beta1*np.exp(-alpha1)
+    last_col_1 = sum_log_prob_not_coalesce[-1] + np.log(1-beta1) - alpha1*(1 + G) - np.log(2500) + np.log(G**2/temp1 + (2*G-1)/temp1**2 + 2/temp1**3)
+
+    #calculate last column of T2 (unnormalized)
+    alpha2 = bin_midPoint2/50
+    beta2 = 1-1/(2*N[-1])
+    temp2 = 1-beta2*np.exp(-alpha2)
+    last_col_2 = sum_log_prob_not_coalesce[-1] + np.log(1-beta2) - alpha2*(1 + G) - np.log(50) + np.log(G/temp2 + 1/temp2**2)
+
+    matrix1 = np.append(matrix1, last_col_1[:,np.newaxis], axis=1)
+    matrix2 = np.append(matrix2, last_col_2[:,np.newaxis], axis=1)
     term1 = np.sum(np.exp(T1 + bin1[:,np.newaxis])*matrix1)
     term2 = np.sum(np.exp(T2 + bin2[:,np.newaxis])*matrix2)
     return -term1-term2-penalty
