@@ -96,7 +96,8 @@ def eStep(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
 
 
 def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
-    N_updated = minimize(logLike, N, args=(T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2), method='L-BFGS-B')
+    bnds = [(0, np.inf) for n in N]
+    N_updated = minimize(logLike, N, args=(T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2), method='L-BFGS-B', tol=1e-6, bounds=bnds)
     ##return the updated N estimate
     #maxGen = len(N)
     #N_updated = np.zeros(maxGen)
