@@ -25,7 +25,6 @@ def initializeT_Random(numBins, maxGen):
 def logLike(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2):
     ##calculate and return the log likelihood of the complete data
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))
-    sum_log_prob_coalesce = sum_log_prob_not_coalesce - np.log(2*N)
     G = len(N)
     ##for IBD segments in the middle of a chromosome, calculate the prob of coalescing earlier than G generations in the past
     alpha1 = bin_midPoint1/50 #this is a vector
