@@ -130,8 +130,8 @@ def negCompleteDataLikelihood(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint
 
     matrix1 = np.append(matrix1, last_col_1[:,np.newaxis], axis=1)
     matrix2 = np.append(matrix2, last_col_2[:,np.newaxis], axis=1)
-    term1 = np.sum(np.exp(T1 + bin1[:,np.newaxis])*matrix1)
-    term2 = np.sum(np.exp(T2 + bin2[:,np.newaxis])*matrix2)
+    term1 = np.sum(np.exp(T1 + np.log(bin1)[:,np.newaxis])*matrix1)
+    term2 = np.sum(np.exp(T2 + np.log(bin2)[:,np.newaxis])*matrix2)
     return -term1-term2-penalty
 
 
