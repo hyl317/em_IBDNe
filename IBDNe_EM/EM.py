@@ -42,7 +42,7 @@ def logLike(N, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     diff = N_shifted - N
     penalty = alpha*np.sum(np.dot(diff, diff))/N_p
 
-    return np.sum(bin1*np.apply_along_axis(logsumexp, 1, T1_unnormalized)) + np.sum(bin2*np.apply_along_axis(logsumexp, 1, T2_unnormalized)) + penalty
+    return np.sum(bin1*np.apply_along_axis(logsumexp, 1, T1_unnormalized)) + np.sum(bin2*np.apply_along_axis(logsumexp, 1, T2_unnormalized)) - penalty
 
 def eStep(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
