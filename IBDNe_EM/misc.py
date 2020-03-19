@@ -1,4 +1,9 @@
 #some miscellaneous functions
+
+import numpy as np
+import math
+import statsmodels.api as sm
+
 def newton(f,Df,x0,epsilon,max_iter, X, Y, prev, interval):
     '''Approximate solution of f(x)=0 by Newton's method.
 
@@ -61,7 +66,7 @@ def refEurNe():
     eur_N_0 = 7.13e+04
     eur_growth_rate = 0.0195
     eur_N_curr = eur_N_0
-    N = [N_0]
+    N = [eur_N_0]
     for g in np.arange(99, 0, -1):
         eur_N_curr = eur_N_curr*(np.exp(eur_growth_rate))
         N.insert(0, eur_N_curr)
