@@ -48,10 +48,10 @@ def logLike(N, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     len_times_g_over_50_1 = bin_midPoint1.reshape((len(bin_midPoint1),1))@(np.arange(1, G+1).reshape((1, G)))/50
     len_times_g_over_50_2 = bin_midPoint2.reshape((len(bin_midPoint2),1))@(np.arange(1, G+1).reshape((1, G)))/50
 
-    T1 = 2*log_g_over_50 - len_times_g_over_50_1 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
-    T2 = log_g_over_50 - len_times_g_over_50_2 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
-    T1 = np.append(T1, last_col_1[:,np.newaxis], axis=1)
-    T2 = np.append(T2, last_col_2[:,np.newaxis], axis=1)
+    T1_temp = 2*log_g_over_50 - len_times_g_over_50_1 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
+    T2_temp = log_g_over_50 - len_times_g_over_50_2 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
+    T1_unnormalized = np.append(T1_temp, last_col_1[:,np.newaxis], axis=1)
+    T2_unnormalized = np.append(T2_temp, last_col_2[:,np.newaxis], axis=1)
 
     ## add penalty term to the log likelihood
     N_shifted = np.roll(N,-1)
@@ -59,7 +59,7 @@ def logLike(N, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     diff = N_shifted - N
     penalty = alpha*np.sum(np.dot(diff, diff))/N_p
 
-    return np.sum(bin1*np.apply_along_axis(logsumexp, 1, T1)) + np.sum(bin2*np.apply_along_axis(logsumexp, 1, T2)) + penalty
+    return np.sum(bin1*np.apply_along_axis(logsumexp, 1, T1_unnormalized)) + np.sum(bin2*np.apply_along_axis(logsumexp, 1, T2_unnormalized)) + penalty
 
 def eStep(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
@@ -116,13 +116,13 @@ def negCompleteDataLikelihood(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint
     matrix1 = 2*log_g_over_50 - len_times_g_over_50_1 + sum_log_prob_not_coalesce[:-1] - log_2_times_N_g
     matrix2 = log_g_over_50 - len_times_g_over_50_2 + sum_log_prob_not_coalesce[:-1] - log_2_times_N_g
 
-    #calculate last column of T1 (unnormalized)
+    #calculate last column of matrix1
     alpha1 = bin_midPoint1/50 #this is a vector
     beta1 = 1-1/(2*N[-1]) #this is just a scalar
     temp1 = 1-beta1*np.exp(-alpha1)
     last_col_1 = sum_log_prob_not_coalesce[-1] + np.log(1-beta1) - alpha1*(1 + G) - np.log(2500) + np.log(G**2/temp1 + (2*G-1)/temp1**2 + 2/temp1**3)
 
-    #calculate last column of T2 (unnormalized)
+    #calculate last column of matrix2
     alpha2 = bin_midPoint2/50
     beta2 = 1-1/(2*N[-1])
     temp2 = 1-beta2*np.exp(-alpha2)
@@ -154,7 +154,10 @@ def jacobian(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     penalty_term = 4*N - 2*(N_left + N_right)
     penalty_term[0] = 2*(N[0] - N[1])
     penalty_term[-1] = 2*(N[-1] - N[-2])
-    #print(f'penalty component in gradient: {alpha*penalty_term/np}')
+
+    print(f'penalty component in gradient: {alpha*penalty_term/np}')
+    print(f'likelihood component in gradient: {np.exp(likelihood_term)}')
+
     return -np.exp(likelihood_term) - alpha*penalty_term/N_p
 
 
