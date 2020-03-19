@@ -132,6 +132,11 @@ def negCompleteDataLikelihood(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint
     matrix2 = np.append(matrix2, last_col_2[:,np.newaxis], axis=1)
     term1 = np.sum(np.exp(T1 + np.log(bin1)[:,np.newaxis])*matrix1)
     term2 = np.sum(np.exp(T2 + np.log(bin2)[:,np.newaxis])*matrix2)
+    #print(f'term1:{term1}',flush=True)
+    #print(f'term2:{term2}', flush=True)
+    #print(f'penalty:{penalty}', flush=True)
+    #if math.isnan(term1) or math.isnan(term2):
+    #print(N)
     return -term1-term2-penalty
 
 
@@ -142,29 +147,35 @@ def jacobian(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     sum_over_every_column1 = np.apply_along_axis(logsumexp, 0, T1)
     sum_over_every_column2 = np.apply_along_axis(logsumexp, 0, T2)
     logA = np.logaddexp(sum_over_every_column1, sum_over_every_column2)[:-1]
+
     temp1 = np.logaddexp.accumulate(np.fliplr(sum_over_every_column1.reshape(1, maxGen+1)).flatten())
     cum_sum_to_the_right1 = np.fliplr(temp1.reshape(1, len(temp1))).flatten()[1:]
     temp2 = np.logaddexp.accumulate(np.fliplr(sum_over_every_column2.reshape(1, maxGen+1)).flatten())
     cum_sum_to_the_right2 = np.fliplr(temp2.reshape(1, len(temp2))).flatten()[1:]
     logB = np.logaddexp(cum_sum_to_the_right1, cum_sum_to_the_right2)
 
-    likelihood_term = np.log(N) - logA - np.log(N*(2*N-1)) + logB
+    #likelihood_term = np.log(N) - logA - np.log(N*(2*N-1)) + logB
+    likelihood_term = -np.exp(logA)/N + np.exp(logB)/(N*(2*N-1))
     N_left = np.roll(N,-1)
     N_right = np.roll(N,1)
     penalty_term = 4*N - 2*(N_left + N_right)
     penalty_term[0] = 2*(N[0] - N[1])
     penalty_term[-1] = 2*(N[-1] - N[-2])
 
-    print(f'penalty component in gradient: {alpha*penalty_term/np}')
-    print(f'likelihood component in gradient: {np.exp(likelihood_term)}')
+    #print(f'logA:{logA}')
+    #print(f'logB:{logB}')
+    #print(f'penalty component in gradient: {alpha*penalty_term/N_p}')
+    #print(f'likelihood component in gradient: {likelihood_term}')
 
-    return -np.exp(likelihood_term) - alpha*penalty_term/N_p
+    #return -np.exp(likelihood_term) - alpha*penalty_term/N_p
+    print(f'calculated jacobian is {-likelihood_term - alpha*penalty_term/N_p}')
+    return -likelihood_term - alpha*penalty_term/N_p
 
 
 def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     bnds = [(0, np.inf) for n in N]
     result = minimize(negCompleteDataLikelihood, N, args=(T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha), 
-                      method='L-BFGS-B', tol=1e-6, bounds=bnds, jac=jacobian)
+                      method='Nelder-Mead', tol=1e-6, bounds=bnds)
     ##return the updated N estimate
     #maxGen = len(N)
     #N_updated = np.zeros(maxGen)
@@ -182,7 +193,7 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
 
     #N_updated[:maxGen-1] = (1+np.exp(logB-logA))/2
     #N_updated[maxGen-1] = N_updated[maxGen-2]
-    print(f'N updated:{result}')
+    print(f'N updated:{result}', flush=True)
     return result.x
 
 
@@ -190,7 +201,7 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
 def em(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, numInds, tol, maxIter):
     alpha = 0.05
     N_p = 2*numInds*(2*numInds-2)/2
-    N, T1, T2 = initializeN_autoreg(maxGen), initializeT_Random(bin1.shape[0], maxGen), initializeT_Random(bin2.shape[0], maxGen)
+    N, T1, T2 = initializeN_Uniform(maxGen, 10000), initializeT_Random(bin1.shape[0], maxGen), initializeT_Random(bin2.shape[0], maxGen)
     print(f"initial N:{N}")
     loglike_prev = logLike(N, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
     T1, T2 = eStep(N, bin1, bin2, bin_midPoint1, bin_midPoint2)
