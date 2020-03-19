@@ -8,20 +8,6 @@ from csaps import csaps
 
 C = 2
 
-#def refFinNe():
-#    growth_rate1 = 0.0247
-#    growth_rate2 = 0.182
-#    N_0 = 1000
-#    N_curr = N_0
-#    N = [N_0]
-#    for g in np.arange(99, 0, -1):
-#        if g >= 13:
-#            N_curr = N_curr*(np.exp(growth_rate1))
-#        else:
-#            N_curr = N_curr*(np.exp(growth_rate2))
-#        N.insert(0, N_curr)
-#    return np.array(N)
-
 
 #def initializeT_Random(numBins, maxGen):
 #    T = np.random.rand(numBins, maxGen)

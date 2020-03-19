@@ -5,26 +5,9 @@ import statsmodels.api as sm
 from scipy.special import logsumexp
 from scipy.optimize import minimize
 from plotting import *
+from misc import *
 
-def initializeN_Uniform(maxGen, Ne):
-    return np.full(maxGen, Ne)
 
-def initializeN_autoreg(maxGen):
-    #initialize N, the population size trajectory
-    phi = 0.98
-    ar = np.array([1, -phi])
-    MU, sigma = math.log(10000), math.log(10000)/10
-    #specify a AR(1) model, by default the mean 0 since it's a stationary time series
-    N = sm.tsa.arma_generate_sample(ar, np.array([1]), maxGen, scale=math.sqrt(1-phi**2)*sigma)
-    return np.exp(N + MU) #now N has mean 10,000
-
-def initializeT_Uniform(numBins, maxGen):
-    T = np.full((numBins, maxGen+1), np.log(1/(maxGen+1)))
-    return T
-
-def initializeT_Random(numBins, maxGen):
-    T = np.random.rand(numBins, maxGen+1)
-    return T/T.sum(axis=1)[:, np.newaxis]
 
 def logLike(N, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     ##calculate and return the log likelihood of the complete data
@@ -197,10 +180,20 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     return result.x
 
 
+def test(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
+    refNe = refEurNe()
+    randomNe = initializeN_autoreg(maxGen)
+    refLog = logLike(refNe, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
+    randomLog = logLike(randomNe, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
+    print(f'penalized log likelihood of reference Ne trajectory: {refLog}')
+    print(f'penalized log likelihood of random Ne trajectory: {randomLog}')
+
+
 
 def em(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, numInds, tol, maxIter):
     alpha = 0.05
     N_p = 2*numInds*(2*numInds-2)/2
+    test(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
     N, T1, T2 = initializeN_Uniform(maxGen, 10000), initializeT_Random(bin1.shape[0], maxGen), initializeT_Random(bin2.shape[0], maxGen)
     print(f"initial N:{N}")
     loglike_prev = logLike(N, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
