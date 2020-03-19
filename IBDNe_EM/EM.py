@@ -185,6 +185,8 @@ def test(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     randomNe = initializeN_autoreg(maxGen)
     refLog = logLike(refNe, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
     randomLog = logLike(randomNe, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
+    print(f'reference Ne: {refNe}')
+    print(f'random Ne: {randomNe}')
     print(f'penalized log likelihood of reference Ne trajectory: {refLog}')
     print(f'penalized log likelihood of random Ne trajectory: {randomLog}')
 

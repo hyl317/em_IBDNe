@@ -1,9 +1,7 @@
-from EM import initializeN_autoreg
 from scipy.special import logsumexp
 import numpy as np
 from plotting import *
 from misc import *
-#from scipy.interpolate import UnivariateSpline
 from csaps import csaps
 
 C = 2
@@ -13,22 +11,6 @@ C = 2
 #    T = np.random.rand(numBins, maxGen)
 #    return T/T.sum(axis=1)[:, np.newaxis]
 
-def initializeN_Uniform(maxGen, Ne):
-    return np.full(maxGen, Ne)
-
-def refFinNe():
-    growth_rate1 = 0.0247
-    growth_rate2 = 0.182
-    N_0 = 1000
-    N_curr = N_0
-    N = [N_0]
-    for g in np.arange(99, 0, -1):
-        if g >= 13:
-            N_curr = N_curr*(np.exp(growth_rate1))
-        else:
-            N_curr = N_curr*(np.exp(growth_rate2))
-        N.insert(0, N_curr)
-    return np.array(N)
 
 def updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
