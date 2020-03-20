@@ -12,6 +12,7 @@ from misc import *
 def logLike(N, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     ##calculate and return the log likelihood of the complete data
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))
+    #print(f'sum log prob not coalesce: {sum_log_prob_not_coalesce}')
     G = len(N)
     ##for IBD segments in the middle of a chromosome, calculate the prob of coalescing earlier than G generations in the past
     alpha1 = bin_midPoint1/50 #this is a vector
@@ -23,6 +24,9 @@ def logLike(N, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     alpha2 = bin_midPoint2/50
     beta2 = 1-1/(2*N[-1])
     temp2 = 1-beta2*np.exp(-alpha2)
+    #print(f'alpha2:{alpha2}')
+    #print(f'beta2:{beta2}')
+    #print(f'temp2:{temp2}')
     last_col_2 = sum_log_prob_not_coalesce[-1] + np.log(1-beta2) - alpha2*(1 + G) - np.log(50) + np.log(G/temp2 + 1/temp2**2)
 
     ##calculate, for each bin, the IBD segments coalesce at 1,2,...,G generations in the past
@@ -41,8 +45,8 @@ def logLike(N, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     N_shifted[-1] = N[-1]
     diff = N_shifted - N
     penalty = alpha*np.sum(np.dot(diff, diff))/N_p
-    print(T1_unnormalized)
-    print(T2_unnormalized)
+    #print(T1_unnormalized)
+    #print(T2_unnormalized)
 
     return np.sum(bin1*np.apply_along_axis(logsumexp, 1, T1_unnormalized)) + np.sum(bin2*np.apply_along_axis(logsumexp, 1, T2_unnormalized)) - penalty
 
@@ -199,14 +203,14 @@ def test_loglike_toyEx():
     bin_midPoint2 = np.array([2,4,6])
     N = initializeN_Uniform(5, 1000)
     N_p, alpha = 20, 0.05
-    logLike(N, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
-
+    log = logLike(N, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
+    print(f'loglike of this toy example is {log}')
 
 
 def em(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, numInds, tol, maxIter):
     alpha = 0.05
     N_p = 2*numInds*(2*numInds-2)/2
-    test_loglike_toyEx()
+    #test_loglike_toyEx()
     test_loglike(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
     N, T1, T2 = initializeN_Uniform(maxGen, 10000), initializeT_Random(bin1.shape[0], maxGen), initializeT_Random(bin2.shape[0], maxGen)
     print(f"initial N:{N}")
