@@ -65,7 +65,7 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     #a penalized optimization approach
     bnds = [(0, np.inf) for n in N]
     result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, 0.05), 
-                      method='L-BFGS-B', tol=1e-6, bounds=bnds)
+                      method='L-BFGS-B', tol=1e-6, bounds=bnds, jac=jacobian)
     print(result)
     return result.x
 
@@ -98,6 +98,23 @@ def loss_func(N, log_obs, log_term3, n_p, alpha):
     diff_obs_expectation = np.exp(log_obs) - np.exp(log_expectation)
     print(f'diff between obs and expected:{diff_obs_expectation}')
     return np.sum(np.dot(diff_obs_expectation, diff_obs_expectation))/G + penalty
+
+def jacobian(N, log_obs, log_term3, n_p, alpha):
+    G = len(N)
+
+    gen = np.arange(1, G+1)
+    sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
+    log_expectation = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
+    residual_term = 2*(np.exp(log_obs)-np.exp(log_expectation))*np.exp(log_expectation)/(G*N)
+
+    #penalty for roughness
+    N_left = np.roll(N,-1)
+    N_right = np.roll(N,1)
+    penalty_term = 4*N - 2*(N_left + N_right)
+    penalty_term[0] = 2*(N[0] - N[1])
+    penalty_term[-1] = 2*(N[-1] - N[-2])
+
+    return residual_term + alpha*penalty_term
 
 
 def fit_exp_curve(log_numerator, log_denominator, interval=10):
