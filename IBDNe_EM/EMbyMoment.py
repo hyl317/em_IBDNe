@@ -3,6 +3,7 @@ import numpy as np
 from plotting import *
 from misc import *
 from csaps import csaps
+from scipy.optimize import minimize
 
 C = 2
 
@@ -56,9 +57,18 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     gen = np.arange(1, maxGen+1)
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
     log_numerator = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
-    
+
+    #the following two lines implement the method as it is in the original IBDNe paper    
     final_N = fit_exp_curve(log_numerator, log_total_expected_ibd_len_each_gen)
     return final_N
+
+    #a penalized optimization approach
+    bnds = [(0, np.inf) for n in N]
+    result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, 0.05), 
+                      method='L-BFGS-B', tol=1e-6, bounds=bnds)
+
+
+    #a spline approach (not quite right)
     #log_N_updated = log_numerator - log_total_expected_ibd_len_each_gen
     #final_N = csaps(np.arange(0, maxGen), np.exp(log_N_updated), np.arange(0, maxGen), smooth=0.8)    
     #return np.exp(log_N_updated)
@@ -71,6 +81,20 @@ def fn(r, X, Y, prev, interval):
 def Dfn(r, X, Y, prev, interval):
     exponent = np.arange(-interval,0,1)
     return -np.sum(exponent*np.exp(r*exponent)*Y)/prev
+
+def loss_func(N, log_obs, alpha):
+    G = len(N)
+    gen = np.arange(1, G+1)
+    sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
+    log_expectation = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
+    
+    N_shifted = np.roll(N,-1)
+    N_shifted[-1] = N[-1]
+    diff = N_shifted - N
+    penalty = alpha*np.sum(np.dot(diff, diff))
+
+    diff_obs_expectation = np.exp(log_obs) - np.exp(log_expectation)
+    return np.sum(np.dot(diff_obs_expectataion, diff_obs_expectation)) + penalty
 
 
 def fit_exp_curve(log_numerator, log_denominator, interval=10):
