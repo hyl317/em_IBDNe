@@ -41,6 +41,8 @@ def logLike(N, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     N_shifted[-1] = N[-1]
     diff = N_shifted - N
     penalty = alpha*np.sum(np.dot(diff, diff))/N_p
+    print(T1_unnormalized)
+    print(T2_unnormalized)
 
     return np.sum(bin1*np.apply_along_axis(logsumexp, 1, T1_unnormalized)) + np.sum(bin2*np.apply_along_axis(logsumexp, 1, T2_unnormalized)) - penalty
 
@@ -180,7 +182,7 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     return result.x
 
 
-def test(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
+def test_loglike(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     refNe = refFinNe()
     randomNe = initializeN_autoreg(maxGen)
     refLog = logLike(refNe, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
@@ -190,12 +192,22 @@ def test(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     print(f'penalized log likelihood of reference Ne trajectory: {refLog}')
     print(f'penalized log likelihood of random Ne trajectory: {randomLog}')
 
+def test_loglike_toyEx():
+    bin1 = np.array([1,1,1])
+    bin_midPoint1 = np.array([2,4,6])
+    bin2 = np.array([1,1,1])
+    bin_midPoint2 = np.array([2,4,6])
+    N = initializeN_Uniform(5, 1000)
+    N_p, alpha = 20, 0.05
+    logLike(N, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
+
 
 
 def em(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, numInds, tol, maxIter):
     alpha = 0.05
     N_p = 2*numInds*(2*numInds-2)/2
-    test(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
+    test_loglike_toyEx()
+    test_loglike(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
     N, T1, T2 = initializeN_Uniform(maxGen, 10000), initializeT_Random(bin1.shape[0], maxGen), initializeT_Random(bin2.shape[0], maxGen)
     print(f"initial N:{N}")
     loglike_prev = logLike(N, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
