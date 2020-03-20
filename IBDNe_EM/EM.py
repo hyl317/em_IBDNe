@@ -181,7 +181,7 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
 
 
 def test(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
-    refNe = refEurNe()
+    refNe = refFinNe()
     randomNe = initializeN_autoreg(maxGen)
     refLog = logLike(refNe, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
     randomLog = logLike(randomNe, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
