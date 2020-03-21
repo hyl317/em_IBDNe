@@ -1,7 +1,6 @@
 #primary functions for EM algorithm
 import numpy as np
 import math
-import statsmodels.api as sm
 from scipy.special import logsumexp
 from scipy.optimize import minimize
 from plotting import *
@@ -24,9 +23,6 @@ def logLike(N, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     alpha2 = bin_midPoint2/50
     beta2 = 1-1/(2*N[-1])
     temp2 = 1-beta2*np.exp(-alpha2)
-    #print(f'alpha2:{alpha2}')
-    #print(f'beta2:{beta2}')
-    #print(f'temp2:{temp2}')
     last_col_2 = sum_log_prob_not_coalesce[-1] + np.log(1-beta2) - alpha2*(1 + G) - np.log(50) + np.log(G/temp2 + 1/temp2**2)
 
     ##calculate, for each bin, the IBD segments coalesce at 1,2,...,G generations in the past
