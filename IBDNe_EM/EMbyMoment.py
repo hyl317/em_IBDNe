@@ -14,7 +14,6 @@ C = 2
 
 
 def updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
-    print(N)
     #return updated T1 and T2
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))
     #print(sum_log_prob_not_coalesce)
@@ -62,20 +61,18 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     #point_fit_N = np.exp(log_numerator - log_total_expected_ibd_len_each_gen)
     #the following two lines implement the method as it is in the original IBDNe paper    
     #exp_fit_N = fit_exp_curve(log_numerator, log_total_expected_ibd_len_each_gen)
-    powell_fit_N = fmin_powell(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha), disp=1, retall=0, xtol=1e-4, ftol=1e-2)
+    #powell_fit_N = fmin_powell(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha), disp=1, retall=0, xtol=1e-4, ftol=1e-2)
     #print(f'loss after point fitting is {loss_func(point_fit_N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)}')
     #print(f'loss after piecewise exp fitting is {loss_func(exp_fit_N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)}')
-    print(f'loss after powell fitting is {loss_func(powell_fit_N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)}') 
+    #print(f'loss after powell fitting is {loss_func(powell_fit_N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)}') 
     #print(f'powell fitting: {powell_fit_N}')
-    return powell_fit_N
+    #return powell_fit_N
 
     #a penalized optimization approach
-    #bnds = [(0, np.inf) for n in N]
-    #result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, 0.05), 
-    #                  method='L-BFGS-B', tol=1e-6, bounds=bnds)
-    #result = fmin_powell(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, 0.05), disp=1, retall=0, xtol=1e-4, ftol=1e-2)
-    #print(result)
-    #return result
+    bnds = [(1000, 10000000) for n in N]
+    result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha), 
+                      method='L-BFGS-B', tol=1e-4, bounds=bnds)
+    return result.x
 
 
     #a spline approach (not quite right)
