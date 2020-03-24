@@ -14,6 +14,7 @@ C = 2
 
 
 def updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
+    print(N)
     #return updated T1 and T2
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))
     #print(sum_log_prob_not_coalesce)
@@ -97,11 +98,11 @@ def loss_func(N, log_obs, log_term3, n_p, alpha):
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
     log_expectation = np.log(n_p) + sum_log_prob_not_coalesce - np.log(2*N) - C*gen/50 + log_term3
     
-    N_shifted = np.roll(N,-1)
-    N_shifted[-1] = N[-1]
-    diff = N_shifted - N
-    penalty = alpha*np.sum(np.dot(diff, diff))
-
+    #N_shifted = np.roll(N,-1)
+    #N_shifted[-1] = N[-1]
+    #diff = N_shifted - N
+    #penalty = alpha*np.sum(np.dot(diff, diff))
+    penalty = alpha*np.sum(np.diff(N, n=2)**2)
     diff_obs_expectation = np.exp(log_obs) - np.exp(log_expectation)
     return np.sum(np.dot(diff_obs_expectation, diff_obs_expectation)/np.exp(log_obs)) + penalty
 
