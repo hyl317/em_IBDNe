@@ -71,7 +71,8 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     #a penalized optimization approach
     bnds = [(1000, 10000000) for n in N]
     result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha), 
-                      method='L-BFGS-B', tol=1e-4, bounds=bnds)
+                      method='L-BFGS-B',  bounds=bnds, options={'maxfun':30000})
+    print(result, flush=True)
     return result.x
 
 
