@@ -4,7 +4,7 @@ from plotting import *
 from misc import *
 from csaps import csaps
 from scipy.optimize import minimize
-
+from scipy.optimize import fmin_powell
 C = 2
 
 
@@ -58,16 +58,23 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
     log_numerator = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
 
+    point_fit_N = np.exp(log_numerator - log_total_expected_ibd_len_each_gen)
     #the following two lines implement the method as it is in the original IBDNe paper    
-    final_N = fit_exp_curve(log_numerator, log_total_expected_ibd_len_each_gen)
-    return final_N
+    exp_fit_N = fit_exp_curve(log_numerator, log_total_expected_ibd_len_each_gen)
+    powell_fit_N = fmin_powell(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, 0.05), disp=1, retall=0, xtol=1e-4, ftol=1e-2)
+    print(f'loss after point fitting is {loss_func(point_fit_N, log_total_expected_ibd_len_each_gen, log_term3, n_p, 0.05)}')
+    print(f'loss after piecewise exp fitting is {loss_func(exp_fit_N, log_total_expected_ibd_len_each_gen, log_term3, n_p, 0.05)}')
+    print(f'loss after powell fitting is {loss_func(powell_fit_N, log_total_expected_ibd_len_each_gen, log_term3, n_p, 0.05)}') 
+    print(f'powell fitting: {powell_fit_N}')
+    return exp_fit_N
 
     #a penalized optimization approach
-    #bnds = [(0, np.inf) for n in N]
+    bnds = [(0, np.inf) for n in N]
     #result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, 0.05), 
     #                  method='L-BFGS-B', tol=1e-6, bounds=bnds)
-    #print(result)
-    #return result.x
+    result = fmin_powell(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, 0.05), disp=1, retall=0, xtol=1e-4, ftol=1e-2)
+    print(result)
+    return result
 
 
     #a spline approach (not quite right)
@@ -88,7 +95,7 @@ def loss_func(N, log_obs, log_term3, n_p, alpha):
     G = len(N)
     gen = np.arange(1, G+1)
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
-    log_expectation = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
+    log_expectation = np.log(n_p) + sum_log_prob_not_coalesce - np.log(2*N) - C*gen/50 + log_term3
     
     N_shifted = np.roll(N,-1)
     N_shifted[-1] = N[-1]
@@ -97,7 +104,7 @@ def loss_func(N, log_obs, log_term3, n_p, alpha):
 
     diff_obs_expectation = np.exp(log_obs) - np.exp(log_expectation)
     #print(f'diff between obs and expected:{diff_obs_expectation}')
-    return np.sum(np.dot(diff_obs_expectation, diff_obs_expectation))/G + penalty
+    return np.sum(np.dot(diff_obs_expectation, diff_obs_expectation)/np.exp(log_obs)) + penalty
 
 def jacobian(N, log_obs, log_term3, n_p, alpha):
     G = len(N)
@@ -138,7 +145,7 @@ def fit_exp_curve(log_numerator, log_denominator, interval=10):
         else:
             final_N[maxGen-i*interval:maxGen-(i-1)*interval] = prev*np.exp(r*np.arange(interval,0,-1))
     
-    final_N = csaps(np.arange(0, maxGen), final_N, np.arange(0, maxGen), smooth=0.8)
+    #final_N = csaps(np.arange(0, maxGen), final_N, np.arange(0, maxGen), smooth=0.8)
     return final_N
 
 def testExpectation(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2):

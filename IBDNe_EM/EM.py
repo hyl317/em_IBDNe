@@ -44,7 +44,7 @@ def logLike(N, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
     #print(T1_unnormalized)
     #print(T2_unnormalized)
 
-    return np.sum(bin1*np.apply_along_axis(logsumexp, 1, T1_unnormalized)) + np.sum(bin2*np.apply_along_axis(logsumexp, 1, T2_unnormalized)) - penalty
+    return np.sum(bin1*np.apply_along_axis(logsumexp, 1, T1_unnormalized)) + np.sum(bin2*np.apply_along_axis(logsumexp, 1, T2_unnormalized))
 
 def eStep(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
@@ -183,7 +183,7 @@ def mStep(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
 
 
 def test_loglike(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha):
-    refNe = refFinNe()
+    refNe = refEurNe()
     randomNe = initializeN_autoreg(maxGen)
     refLog = logLike(refNe, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
     randomLog = logLike(randomNe, bin1, bin2, bin_midPoint1, bin_midPoint2, N_p, alpha)
