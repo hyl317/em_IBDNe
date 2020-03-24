@@ -16,6 +16,8 @@ def main():
                         help='Convergence Criterion for EM. Otherwise stop after 100 iterations.')
     parser.add_argument('-e', action="store", dest="end", type=str, required=True,
                         help="path to a file containing first and last marker information for every chromosome.")
+    parser.add_argument('--alpha', action="store", dest="alpha", type=float, required=False, default=0.01,
+                        help="smoothing parameter. Default: 0.01")
     parser.add_argument('--max_iter', action="store", dest="maxIter", type=int, required=False, default=100,
                         help="Maximum number of iterations for EM.")
     args = parser.parse_args()
@@ -24,7 +26,7 @@ def main():
     print(f'A total of {np.sum(bin1)+np.sum(bin2)} IBD segments read for {numInds} individuals.', flush=True)
     print(f'Among them, {np.sum(bin2)} reach chromosome end.', flush=True)
     #N, T1, T2 = em(args.maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, numInds, args.tol, args.maxIter)
-    N, T1, T2 = em_byMoment(args.maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, args.tol, args.maxIter)
+    N, T1, T2 = em_byMoment(args.maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, args.alpha, args.tol, args.maxIter)
     
     with open('ibdne.txt','w') as out:
         for g, ne in enumerate(N):

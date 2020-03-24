@@ -47,7 +47,7 @@ def updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     T2 = T2 - normalizing_constant2
     return T1, T2
 
-def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N):
+def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha):
     log_total_len_each_bin1 = np.log(bin1) + np.log(bin_midPoint1)
     log_total_len_each_bin2 = np.log(bin2) + np.log(bin_midPoint2)
     log_expected_ibd_len_each_gen1 = np.apply_along_axis(logsumexp, 0, T1 + log_total_len_each_bin1[:,np.newaxis])
@@ -58,23 +58,23 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
     log_numerator = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
 
-    point_fit_N = np.exp(log_numerator - log_total_expected_ibd_len_each_gen)
+    #point_fit_N = np.exp(log_numerator - log_total_expected_ibd_len_each_gen)
     #the following two lines implement the method as it is in the original IBDNe paper    
-    exp_fit_N = fit_exp_curve(log_numerator, log_total_expected_ibd_len_each_gen)
-    powell_fit_N = fmin_powell(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, 0.05), disp=1, retall=0, xtol=1e-4, ftol=1e-2)
-    print(f'loss after point fitting is {loss_func(point_fit_N, log_total_expected_ibd_len_each_gen, log_term3, n_p, 0.05)}')
-    print(f'loss after piecewise exp fitting is {loss_func(exp_fit_N, log_total_expected_ibd_len_each_gen, log_term3, n_p, 0.05)}')
-    print(f'loss after powell fitting is {loss_func(powell_fit_N, log_total_expected_ibd_len_each_gen, log_term3, n_p, 0.05)}') 
-    print(f'powell fitting: {powell_fit_N}')
-    return exp_fit_N
+    #exp_fit_N = fit_exp_curve(log_numerator, log_total_expected_ibd_len_each_gen)
+    powell_fit_N = fmin_powell(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha), disp=1, retall=0, xtol=1e-4, ftol=1e-2)
+    #print(f'loss after point fitting is {loss_func(point_fit_N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)}')
+    #print(f'loss after piecewise exp fitting is {loss_func(exp_fit_N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)}')
+    print(f'loss after powell fitting is {loss_func(powell_fit_N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)}') 
+    #print(f'powell fitting: {powell_fit_N}')
+    return powell_fit_N
 
     #a penalized optimization approach
-    bnds = [(0, np.inf) for n in N]
+    #bnds = [(0, np.inf) for n in N]
     #result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, 0.05), 
     #                  method='L-BFGS-B', tol=1e-6, bounds=bnds)
-    result = fmin_powell(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, 0.05), disp=1, retall=0, xtol=1e-4, ftol=1e-2)
-    print(result)
-    return result
+    #result = fmin_powell(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, 0.05), disp=1, retall=0, xtol=1e-4, ftol=1e-2)
+    #print(result)
+    #return result
 
 
     #a spline approach (not quite right)
@@ -103,7 +103,6 @@ def loss_func(N, log_obs, log_term3, n_p, alpha):
     penalty = alpha*np.sum(np.dot(diff, diff))
 
     diff_obs_expectation = np.exp(log_obs) - np.exp(log_expectation)
-    #print(f'diff between obs and expected:{diff_obs_expectation}')
     return np.sum(np.dot(diff_obs_expectation, diff_obs_expectation)/np.exp(log_obs)) + penalty
 
 def jacobian(N, log_obs, log_term3, n_p, alpha):
@@ -160,9 +159,7 @@ def testExpectation(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2):
     print(np.exp(T1_2.T))
     print(np.exp(T1_3.T))
 
-def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, tol, maxIter):
-    #N = initializeN_autoreg(maxGen)
-    #testExpectation(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2)
+def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, alpha, tol, maxIter):
     N = initializeN_autoreg(maxGen)
     print(f"initial N:{N}")
 
@@ -170,7 +167,6 @@ def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, nu
     #this quantity is a constant in all iterations
     #so is more efficient to calculate here, save as a local variable, and pass it onto future iterations
     n_p = (2*numInds)*(2*numInds-2)/2
-    #print(chr_len_cM)
     chr_len_cM = chr_len_cM[:,np.newaxis]
     gen = np.arange(1, maxGen+1).reshape((1, maxGen))
     log_term3 = np.log(np.sum(C*(chr_len_cM@gen)/50 + chr_len_cM - ((C**2)*gen)/50, axis=0))
@@ -178,22 +174,22 @@ def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, nu
     #data preprocessing done. Start EM.
     N_prev = N
     T1, T2 = updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2)
-    N = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N)
+    N = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha)
     #T1, T2 = updatePosterior(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
     N_curr = N
     num_iter = 1
     diff = N_curr - N_prev
-    dist = diff.dot(diff)
-    plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+1), title=f'Posterior Distribution for Iteration {num_iter}')
+    dist = diff.dot(diff)/maxGen
+    #plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+1), title=f'Posterior Distribution for Iteration {num_iter}')
 
     while ( dist >= tol and num_iter < maxIter):
         print(f'iteration{num_iter} done. Diff:{dist}')
         N_prev = N_curr
         T1, T2 = updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2)
-        N = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N)
+        N = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha)
         N_curr = N
         diff = N_curr - N_prev
-        dist = diff.dot(diff)
+        dist = diff.dot(diff)/maxGen
         num_iter += 1
     
     print(f'iteration{num_iter} done.')
