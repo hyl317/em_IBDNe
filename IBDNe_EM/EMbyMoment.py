@@ -71,7 +71,7 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     #a penalized optimization approach
     bnds = [(1000, 10000000) for n in N]
     result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha), 
-                      method='L-BFGS-B',  bounds=bnds, options={'maxfun':30000})
+                      method='L-BFGS-B',  bounds=bnds)
     print(result, flush=True)
     return result.x
 
@@ -104,7 +104,7 @@ def jacobian(N, log_obs, log_term3, n_p, alpha):
     jacMatrix = np.zeros((maxGen, maxGen))
 
     #calculate diagonal elements
-    gen = np.arange(1, G+1)
+    gen = np.arange(1, maxGen+1)
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
     log_common_terms = np.log(n_p) + sum_log_prob_not_coalesce - C*gen/50 + log_term3
     np.fill_diagonal(jacMatrix, -np.exp(log_common_terms + np.log(0.5) -2*np.log(N)))
@@ -166,7 +166,8 @@ def testExpectation(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2):
     print(np.exp(T1_3.T))
 
 def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, alpha, tol, maxIter):
-    N = initializeN_autoreg(maxGen)
+    #N = initializeN_autoreg(maxGen)
+    N = initializeN_Uniform(maxGen, 10000)
     print(f"initial N:{N}")
 
     #pre-calculate log of term3 in the updateN step
