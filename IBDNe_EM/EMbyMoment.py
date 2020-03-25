@@ -5,6 +5,7 @@ from misc import *
 from csaps import csaps
 from scipy.optimize import minimize
 from scipy.optimize import fmin_powell
+import sys
 C = 2
 
 
@@ -166,6 +167,22 @@ def testExpectation(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2):
     print(np.exp(T1_1.T))
     print(np.exp(T1_2.T))
     print(np.exp(T1_3.T))
+
+
+#test gradient calculation for loss_func in EMbyMoment.py
+def gradientCheck(N, log_obs, log_term3, n_p, alpha):
+    delta = 1e-4
+    maxGen = len(N)
+    calculated = jacobian(N, log_obs, log_term3, n_p, alpha)
+    gradient = np.zeros(maxGen)
+    for g in np.arange(maxGen):
+        upper, lower = N[g] + delta, N[g] - delta
+        gradient[g] = (upper - lower)/(2*delta)
+    print(f'calculated gradient is: {calculated}')
+    print(f'approximated gradient is: {gradient}')
+    sys.exit()
+
+
 
 def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, alpha, tol, maxIter):
     #N = initializeN_autoreg(maxGen)

@@ -92,3 +92,4 @@ def initializeT_Uniform(numBins, maxGen):
 def initializeT_Random(numBins, maxGen):
     T = np.random.rand(numBins, maxGen+1)
     return T/T.sum(axis=1)[:, np.newaxis]
+
