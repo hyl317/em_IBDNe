@@ -71,7 +71,7 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     #a penalized optimization approach
     bnds = [(1000, 10000000) for n in N]
     result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha), 
-                      method='L-BFGS-B',  bounds=bnds)
+                      method='L-BFGS-B',  bounds=bnds, options={'maxfun':100000})
     print(result, flush=True)
     return result.x
 
@@ -115,6 +115,8 @@ def jacobian(N, log_obs, log_term3, n_p, alpha):
                                      + np.log(0.5) - 2*np.log(N[:g-1]))
 
     #summing up
+    print(f'calculate gradient at N={N}')
+    #print(f'jacob matrix: {jacMatrix}')
     log_expectation = log_common_terms - np.log(2*N)
     chain_part1 = 2*(np.exp(log_expectation)-np.exp(log_obs))/np.exp(log_obs)
     chi2_term = np.sum(jacMatrix*chain_part1[:,np.newaxis], axis=0)
@@ -125,7 +127,7 @@ def jacobian(N, log_obs, log_term3, n_p, alpha):
     penalty_term = 4*N - 2*(N_left + N_right)
     penalty_term[0] = 2*(N[0] - N[1])
     penalty_term[-1] = 2*(N[-1] - N[-2])
-
+    print(f'gradient is {chi2_term+alpha*penalty_term}')
     return chi2_term + alpha*penalty_term
 
 
