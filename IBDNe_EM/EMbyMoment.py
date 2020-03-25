@@ -95,22 +95,29 @@ def loss_func(N, log_obs, log_term3, n_p, alpha):
     gen = np.arange(1, G+1)
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
     log_expectation = np.log(n_p) + sum_log_prob_not_coalesce - np.log(2*N) - C*gen/50 + log_term3
-    
-    #N_shifted = np.roll(N,-1)
-    #N_shifted[-1] = N[-1]
-    #diff = N_shifted - N
-    #penalty = alpha*np.sum(np.dot(diff, diff))
     penalty = alpha*np.sum(np.diff(N, n=2)**2)
     diff_obs_expectation = np.exp(log_obs) - np.exp(log_expectation)
     return np.sum(np.dot(diff_obs_expectation, diff_obs_expectation)/np.exp(log_obs)) + penalty
 
 def jacobian(N, log_obs, log_term3, n_p, alpha):
-    G = len(N)
+    maxGen = len(N)
+    jacMatrix = np.zeros((maxGen, maxGen))
 
+    #calculate diagonal elements
     gen = np.arange(1, G+1)
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
-    log_expectation = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
-    residual_term = 2*(np.exp(log_obs)-np.exp(log_expectation))*np.exp(log_expectation)/(G*N)
+    log_common_terms = np.log(n_p) + sum_log_prob_not_coalesce - C*gen/50 + log_term3
+    np.fill_diagonal(jacMatrix, -np.exp(log_common_terms + np.log(0.5) -2*np.log(N)))
+
+    #calculate lower triangular terms
+    for g in range(2, maxGen+1):
+        jacMatrix[g-1,:g-1] = np.exp(log_common_terms[g-1] - np.log(2*N[g-1]) - np.log(1-1/(2*N[:g-1])) 
+                                     + np.log(0.5) - 2*np.log(N[:g-1]))
+
+    #summing up
+    log_expectation = log_common_terms - np.log(2*N)
+    chain_part1 = 2*(np.exp(log_expectation)-np.exp(log_obs))/np.exp(log_obs)
+    chi2_term = np.sum(jacMatrix*chain_part1[:,np.newaxis], axis=0)
 
     #penalty for roughness
     N_left = np.roll(N,-1)
@@ -119,7 +126,7 @@ def jacobian(N, log_obs, log_term3, n_p, alpha):
     penalty_term[0] = 2*(N[0] - N[1])
     penalty_term[-1] = 2*(N[-1] - N[-2])
 
-    return residual_term + alpha*penalty_term
+    return chi2_term + alpha*penalty_term
 
 
 def fit_exp_curve(log_numerator, log_denominator, interval=10):
