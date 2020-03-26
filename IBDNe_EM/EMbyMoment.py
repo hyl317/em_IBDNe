@@ -2,17 +2,11 @@ from scipy.special import logsumexp
 import numpy as np
 from plotting import *
 from misc import *
-from csaps import csaps
 from scipy.optimize import minimize
-from scipy.optimize import fmin_powell
+from scipy.ndimage.interpolation import shift
 import sys
+
 C = 2
-
-
-#def initializeT_Random(numBins, maxGen):
-#    T = np.random.rand(numBins, maxGen)
-#    return T/T.sum(axis=1)[:, np.newaxis]
-
 
 def updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
@@ -70,10 +64,10 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     #return powell_fit_N
 
     #a penalized optimization approach
-    gradientChecker(N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)
+    #gradientChecker(N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)
     bnds = [(1000, 10000000) for n in N]
     result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha), 
-                      method='L-BFGS-B',  bounds=bnds, options={'maxfun':100000})
+                      method='L-BFGS-B',  bounds=bnds, jac=jacobian)
     print(result, flush=True)
     return result.x
 
@@ -93,13 +87,14 @@ def Dfn(r, X, Y, prev, interval):
     return -np.sum(exponent*np.exp(r*exponent)*Y)/prev
 
 def loss_func(N, log_obs, log_term3, n_p, alpha):
+    #print(f'calculate loss for N={N}')
     G = len(N)
     gen = np.arange(1, G+1)
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
     log_expectation = np.log(n_p) + sum_log_prob_not_coalesce - np.log(2*N) - C*gen/50 + log_term3
     penalty = alpha*np.sum(np.diff(N, n=2)**2)
     diff_obs_expectation = np.exp(log_obs) - np.exp(log_expectation)
-    return np.sum(np.dot(diff_obs_expectation, diff_obs_expectation)/np.exp(log_obs)) + penalty
+    return np.sum(diff_obs_expectation**2/np.exp(log_obs)) + penalty
 
 def jacobian(N, log_obs, log_term3, n_p, alpha):
     maxGen = len(N)
@@ -120,13 +115,22 @@ def jacobian(N, log_obs, log_term3, n_p, alpha):
     log_expectation = log_common_terms - np.log(2*N)
     chain_part1 = 2*(np.exp(log_expectation)-np.exp(log_obs))/np.exp(log_obs)
     chi2_term = np.sum(jacMatrix*chain_part1[:,np.newaxis], axis=0)
-
-    #penalty for roughness
-    N_left = np.roll(N,-1)
-    N_right = np.roll(N,1)
-    penalty_term = 4*N - 2*(N_left + N_right)
-    penalty_term[0] = 2*(N[0] - N[1])
-    penalty_term[-1] = 2*(N[-1] - N[-2])
+    #print(f'chain part 1: {chain_part1}')
+    #print(f'log_term3 is {log_term3}')
+    #print(f'obs is {np.exp(log_obs)}')
+    #print(f'exp is {np.exp(log_expectation)}')
+    #print(f'jac matrix is: {jacMatrix}')
+    #penalty for roughness(second difference)
+    N_left2 = shift(N, -2, cval=0)
+    N_left1 = shift(N, -1, cval=0)
+    N_right2 = shift(N, 2, cval=0)
+    N_right1 = shift(N, 1, cval=0)
+    penalty_term = 12*N - 8*(N_left1 + N_right1) + 2*(N_left2 + N_right2)
+    penalty_term[0] = 2*N[0]-4*N[1]+2*N[2]
+    penalty_term[1] = 10*N[1]-4*N[0]-8*N[2]+2*N[3]
+    penalty_term[-1] = 2*N[-1]-4*N[-2]+2*N[-3]
+    penalty_term[-2] = 10*N[-2]-4*N[-1]-8*N[-3]+2*N[-4]
+    #print(f'penalty component is {alpha*penalty_term}')
     return chi2_term + alpha*penalty_term
 
 
@@ -151,7 +155,6 @@ def fit_exp_curve(log_numerator, log_denominator, interval=10):
         else:
             final_N[maxGen-i*interval:maxGen-(i-1)*interval] = prev*np.exp(r*np.arange(interval,0,-1))
     
-    #final_N = csaps(np.arange(0, maxGen), final_N, np.arange(0, maxGen), smooth=0.8)
     return final_N
 
 def testExpectation(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2):
@@ -174,8 +177,10 @@ def gradientChecker(N, log_obs, log_term3, n_p, alpha):
     calculated = jacobian(N, log_obs, log_term3, n_p, alpha)
     gradient = np.zeros(maxGen)
     for g in np.arange(maxGen):
+        #print(np.eye(maxGen)[g])
         upper, lower = loss_func(N + delta*np.eye(maxGen)[g], log_obs, log_term3, n_p, alpha), loss_func(N - delta*np.eye(maxGen)[g], log_obs, log_term3, n_p, alpha)
         gradient[g] = (upper - lower)/(2*delta)
+        print(f'diff between up and low: {upper-lower}')
     print(f'calculated gradient is: {calculated}')
     print(f'approximated gradient is: {gradient}')
     sys.exit()
@@ -183,8 +188,8 @@ def gradientChecker(N, log_obs, log_term3, n_p, alpha):
 
 
 def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, alpha, tol, maxIter):
-    #N = initializeN_autoreg(maxGen)
-    N = initializeN_Uniform(maxGen, 10000)
+    N = initializeN_autoreg(maxGen)
+    #N = initializeN_Uniform(maxGen, 20000)
     print(f"initial N:{N}")
 
     #pre-calculate log of term3 in the updateN step
