@@ -4,10 +4,13 @@ from plotting import *
 from misc import *
 from scipy.optimize import minimize
 from scipy.ndimage.interpolation import shift
+from numba import jit
 import sys
 
 C = 2
 
+
+@jit(parallel=True)
 def updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))
@@ -42,6 +45,8 @@ def updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     T2 = T2 - normalizing_constant2
     return T1, T2
 
+
+@jit(parallel=True)
 def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha):
     log_total_len_each_bin1 = np.log(bin1) + np.log(bin_midPoint1)
     log_total_len_each_bin2 = np.log(bin2) + np.log(bin_midPoint2)
@@ -68,15 +73,9 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     bnds = [(1000, 10000000) for n in N]
     result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha), 
                       method='L-BFGS-B',  bounds=bnds, jac=jacobian)
-    print(result, flush=True)
+    #print(result, flush=True)
     return result.x
 
-
-    #a spline approach (not quite right)
-    #log_N_updated = log_numerator - log_total_expected_ibd_len_each_gen
-    #final_N = csaps(np.arange(0, maxGen), np.exp(log_N_updated), np.arange(0, maxGen), smooth=0.8)    
-    #return np.exp(log_N_updated)
-    #return final_N
 
 def fn(r, X, Y, prev, interval):
     exponent = np.arange(-interval,0,1)
@@ -86,6 +85,8 @@ def Dfn(r, X, Y, prev, interval):
     exponent = np.arange(-interval,0,1)
     return -np.sum(exponent*np.exp(r*exponent)*Y)/prev
 
+
+@jit(parallel=True)
 def loss_func(N, log_obs, log_term3, n_p, alpha):
     #print(f'calculate loss for N={N}')
     G = len(N)
@@ -96,6 +97,8 @@ def loss_func(N, log_obs, log_term3, n_p, alpha):
     diff_obs_expectation = np.exp(log_obs) - np.exp(log_expectation)
     return np.sum(diff_obs_expectation**2/np.exp(log_obs)) + penalty
 
+
+@jit(parallel=True)
 def jacobian(N, log_obs, log_term3, n_p, alpha):
     maxGen = len(N)
     jacMatrix = np.zeros((maxGen, maxGen))
@@ -115,12 +118,7 @@ def jacobian(N, log_obs, log_term3, n_p, alpha):
     log_expectation = log_common_terms - np.log(2*N)
     chain_part1 = 2*(np.exp(log_expectation)-np.exp(log_obs))/np.exp(log_obs)
     chi2_term = np.sum(jacMatrix*chain_part1[:,np.newaxis], axis=0)
-    #print(f'chain part 1: {chain_part1}')
-    #print(f'log_term3 is {log_term3}')
-    #print(f'obs is {np.exp(log_obs)}')
-    #print(f'exp is {np.exp(log_expectation)}')
-    #print(f'jac matrix is: {jacMatrix}')
-    #penalty for roughness(second difference)
+
     N_left2 = shift(N, -2, cval=0)
     N_left1 = shift(N, -1, cval=0)
     N_right2 = shift(N, 2, cval=0)
@@ -130,7 +128,7 @@ def jacobian(N, log_obs, log_term3, n_p, alpha):
     penalty_term[1] = 10*N[1]-4*N[0]-8*N[2]+2*N[3]
     penalty_term[-1] = 2*N[-1]-4*N[-2]+2*N[-3]
     penalty_term[-2] = 10*N[-2]-4*N[-1]-8*N[-3]+2*N[-4]
-    #print(f'penalty component is {alpha*penalty_term}')
+
     return chi2_term + alpha*penalty_term
 
 
@@ -204,15 +202,13 @@ def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, nu
     N_prev = N
     T1, T2 = updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2)
     N = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha)
-    #T1, T2 = updatePosterior(N, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2)
     N_curr = N
     num_iter = 1
     diff = N_curr - N_prev
     dist = diff.dot(diff)/maxGen
-    #plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+1), title=f'Posterior Distribution for Iteration {num_iter}')
 
     while ( dist >= tol and num_iter < maxIter):
-        print(f'iteration{num_iter} done. Diff:{dist}')
+        print(f'iteration{num_iter} done. Diff: {dist}')
         N_prev = N_curr
         T1, T2 = updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2)
         N = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha)
@@ -221,6 +217,6 @@ def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, nu
         dist = diff.dot(diff)/maxGen
         num_iter += 1
     
-    print(f'iteration{num_iter} done.')
+    print(f'iteration{num_iter} done. Diff: {dist}')
     plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+1), title=f'Posterior Distribution for Iteration {num_iter}')    
     return N, T1, T2
