@@ -3,6 +3,7 @@ import argparse
 import numpy as np
 from EM import *
 from EM_moment import *
+from EM_moment_tail import *
 from plotting import *
 from preprocess import *
 

@@ -4,6 +4,7 @@ from plotting import *
 from misc import *
 from scipy.optimize import minimize
 from scipy.ndimage.interpolation import shift
+from scipy.integrate import quad
 #from numba import jit
 import sys
 
@@ -74,7 +75,9 @@ def log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, maxGen, n_p):
         part1 = (g-maxGen-1)*np.log(1-1/(2*N_g))
         return np.exp(part1 + part2 + np.log(part3))
     N_past = N[-1]
-    integral, err = quad(partB, maxGen+1, np.inf, args=(N_past, maxGen, C, chromLen))
+    integral, err = quad(partB, maxGen+1, np.inf, args=(N_past, maxGen, C, chr_len_cM))
+    print(f'N={N}')
+    print(f'evaluated at N_g={N_past} and the integral is {integral}')
     return np.log(n_p) - np.log(2*N_past) + np.sum(np.log(1-1/2*N)) + np.log(integral)
 
 
@@ -86,7 +89,7 @@ def loss_func(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
     gen = np.arange(1, G+1)
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
     log_expectation = np.log(n_p) + sum_log_prob_not_coalesce - np.log(2*N) - C*gen/50 + log_term3
-    np.append(log_expectation, log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, G, n_p)) #need to calculate expected amount of IBD coalescing beyond maxGen generations into the past
+    log_expectation = np.append(log_expectation, log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, G, n_p)) #need to calculate expected amount of IBD coalescing beyond maxGen generations into the past
     penalty = alpha*np.sum(np.diff(N, n=2)**2)
     diff_obs_expectation = np.exp(log_obs) - np.exp(log_expectation)
     return np.sum(diff_obs_expectation**2/np.exp(log_obs)) + penalty
