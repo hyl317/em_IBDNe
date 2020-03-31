@@ -37,18 +37,18 @@ def updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     T1 = 2*log_g_over_50 - len_times_g_over_50_1 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
     T2 = log_g_over_50 - len_times_g_over_50_2 - log_2_times_N_g + sum_log_prob_not_coalesce[:-1]
 
-    #this is still log of unnormalized probabilities
-    #is normalization necessary?
-    normalizing_constant1 = np.logaddexp(np.apply_along_axis(logsumexp, 1, T1)[:,np.newaxis], last_col_1[:, np.newaxis])
-    normalizing_constant2 = np.logaddexp(np.apply_along_axis(logsumexp, 1, T2)[:,np.newaxis], last_col_2[:, np.newaxis])
+    #append one additional column of log likelihood of coalescing beyond maxGen generations into the past
+    T1 = np.append(T1, last_col_1[:,np.newaxis], axis=1)
+    T2 = np.append(T2, last_col_2[:, np.newaxis], axis=1)
+    normalizing_constant1 = np.apply_along_axis(logsumexp, 1, T1)[:,np.newaxis]
+    normalizing_constant2 = np.apply_along_axis(logsumexp, 1, T2)[:,np.newaxis]
     T1 = T1 - normalizing_constant1
     T2 = T2 - normalizing_constant2
-    checkPosterior(T1, bin_midPoint1, G)
     return T1, T2
 
 
 #@jit(parallel=True)
-def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha):
+def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha, chr_len_cM):
     log_total_len_each_bin1 = np.log(bin1) + np.log(bin_midPoint1)
     log_total_len_each_bin2 = np.log(bin2) + np.log(bin_midPoint2)
     log_expected_ibd_len_each_gen1 = np.apply_along_axis(logsumexp, 0, T1 + log_total_len_each_bin1[:,np.newaxis])
@@ -59,47 +59,39 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
     log_numerator = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
 
-    #point_fit_N = np.exp(log_numerator - log_total_expected_ibd_len_each_gen)
-    #the following two lines implement the method as it is in the original IBDNe paper    
-    #exp_fit_N = fit_exp_curve(log_numerator, log_total_expected_ibd_len_each_gen)
-    #powell_fit_N = fmin_powell(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha), disp=1, retall=0, xtol=1e-4, ftol=1e-2)
-    #print(f'loss after point fitting is {loss_func(point_fit_N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)}')
-    #print(f'loss after piecewise exp fitting is {loss_func(exp_fit_N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)}')
-    #print(f'loss after powell fitting is {loss_func(powell_fit_N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)}') 
-    #print(f'powell fitting: {powell_fit_N}')
-    #return powell_fit_N
-
     #a penalized optimization approach
     #gradientChecker(N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)
     bnds = [(1000, 10000000) for n in N]
-    result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha), 
-                      method='L-BFGS-B',  bounds=bnds, jac=jacobian)
-    #print(result, flush=True)
+    result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha, chr_len_cM), 
+                      method='L-BFGS-B',  bounds=bnds)
+    print(result, flush=True)
     return result.x
 
+def log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, maxGen, n_p):
+    def partB(g, N_g, maxGen, C, chromLen):
+        part3 = np.sum((C*g/50 + 1)*chromLen) - len(chromLen)*(C**2)*g/50
+        part2 = -C*g/50
+        part1 = (g-maxGen-1)*np.log(1-1/(2*N_g))
+        return np.exp(part1 + part2 + np.log(part3))
+    N_past = N[-1]
+    integral, err = quad(partB, maxGen+1, np.inf, args=(N_past, maxGen, C, chromLen))
+    return np.log(n_p) - np.log(2*N_past) + np.sum(np.log(1-1/2*N)) + np.log(integral)
 
-def fn(r, X, Y, prev, interval):
-    exponent = np.arange(-interval,0,1)
-    return np.sum(X)-np.sum(Y*np.exp(r*exponent))/prev
-
-def Dfn(r, X, Y, prev, interval):
-    exponent = np.arange(-interval,0,1)
-    return -np.sum(exponent*np.exp(r*exponent)*Y)/prev
 
 
-#@jit(parallel=True)
-def loss_func(N, log_obs, log_term3, n_p, alpha):
+
+def loss_func(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
     #print(f'calculate loss for N={N}')
     G = len(N)
     gen = np.arange(1, G+1)
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
     log_expectation = np.log(n_p) + sum_log_prob_not_coalesce - np.log(2*N) - C*gen/50 + log_term3
+    np.append(log_expectation, log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, G, n_p)) #need to calculate expected amount of IBD coalescing beyond maxGen generations into the past
     penalty = alpha*np.sum(np.diff(N, n=2)**2)
     diff_obs_expectation = np.exp(log_obs) - np.exp(log_expectation)
     return np.sum(diff_obs_expectation**2/np.exp(log_obs)) + penalty
 
 
-#@jit(parallel=True)
 def jacobian(N, log_obs, log_term3, n_p, alpha):
     maxGen = len(N)
     jacMatrix = np.zeros((maxGen, maxGen))
@@ -133,29 +125,6 @@ def jacobian(N, log_obs, log_term3, n_p, alpha):
     return chi2_term + alpha*penalty_term
 
 
-def fit_exp_curve(log_numerator, log_denominator, interval=10):
-    #for the last interval, assume a constant Ne
-    assert len(log_numerator) == len(log_denominator)
-    maxGen = len(log_numerator)
-    final_N = np.zeros(maxGen)
-    N = np.exp(logsumexp(log_numerator[maxGen-interval:]) - logsumexp(log_denominator[maxGen-interval:]))
-    final_N[maxGen-interval:] = N
-
-    TOTAL_NUM_INTERVALS = int(maxGen/interval)
-    #print(TOTAL_NUM_INTERVALS)
-    for i in range(2, TOTAL_NUM_INTERVALS+1):
-        #calculate the interval [maxGen-i*interval, maxGen-(i-1)*interval)
-        Ys = np.exp(log_numerator[maxGen-i*interval:maxGen-(i-1)*interval])
-        Xs = np.exp(log_denominator[maxGen-i*interval:maxGen-(i-1)*interval])
-        prev = final_N[maxGen-(i-1)*interval]
-        r = newton(fn, Dfn, 0, 1e-4, 200, Xs, Ys, prev, interval)
-        if r == None or abs(r) >= 2:
-            final_N[maxGen-i*interval:maxGen-(i-1)*interval] = Ys/Xs
-        else:
-            final_N[maxGen-i*interval:maxGen-(i-1)*interval] = prev*np.exp(r*np.arange(interval,0,-1))
-    
-    return final_N
-
 def testExpectation(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2):
     N1 = initializeN_Uniform(maxGen, 10000)
     N2 = initializeN_Uniform(maxGen, 1000)
@@ -184,12 +153,8 @@ def gradientChecker(N, log_obs, log_term3, n_p, alpha):
     print(f'approximated gradient is: {gradient}')
     sys.exit()
 
-def checkPosterior(T, bin_midPoint, maxGen):
-    for row, length in zip(T, bin_midPoint):
-        print(f'probability of coalesce beyond {maxGen} for bin {length} is {1-np.exp(logsumexp(row))}', flush=True)
-    
 
-def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, alpha, tol, maxIter):
+def em_moment_tail(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, alpha, tol, maxIter):
     N = initializeN_autoreg(maxGen)
     #N = initializeN_Uniform(maxGen, 20000)
     print(f"initial N:{N}", flush=True)
@@ -205,7 +170,7 @@ def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, nu
     #data preprocessing done. Start EM.
     N_prev = N
     T1, T2 = updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2)
-    N = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha)
+    N = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha, chr_len_cM)
     N_curr = N
     num_iter = 1
     diff = N_curr - N_prev
@@ -215,7 +180,7 @@ def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, nu
         print(f'iteration{num_iter} done. Diff: {dist}', flush=True)
         N_prev = N_curr
         T1, T2 = updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2)
-        N = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha)
+        N = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha, chr_len_cM)
         N_curr = N
         diff = N_curr - N_prev
         dist = diff.dot(diff)/maxGen
@@ -224,3 +189,4 @@ def em_byMoment(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, nu
     print(f'iteration{num_iter} done. Diff: {dist}', flush=True)
     plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+1), title=f'Posterior Distribution for Iteration {num_iter}')    
     return N, T1, T2
+

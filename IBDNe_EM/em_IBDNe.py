@@ -2,7 +2,7 @@
 import argparse
 import numpy as np
 from EM import *
-from EMbyMoment import *
+from EM_moment import *
 from plotting import *
 from preprocess import *
 
@@ -28,7 +28,7 @@ def main():
     print(f'A total of {np.sum(bin1)+np.sum(bin2)} IBD segments read for {numInds} individuals.', flush=True)
     print(f'Among them, {np.sum(bin2)} reach chromosome end.', flush=True)
     #N, T1, T2 = em(args.maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, numInds, args.tol, args.maxIter)
-    N, T1, T2 = em_byMoment(args.maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, args.alpha, args.tol, args.maxIter)
+    N, T1, T2 = em_moment_tail(args.maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, args.alpha, args.tol, args.maxIter)
     
     with open(f'{args.out}','w') as out:
         for g, ne in enumerate(N):
