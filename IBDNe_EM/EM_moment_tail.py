@@ -76,7 +76,7 @@ def log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, maxGen, n_p):
         return np.exp(part1 + part2 + np.log(part3))
     N_past = N[-1]
     integral, err = quad(partB, maxGen+1, np.inf, args=(N_past, maxGen, C, chr_len_cM))
-    print(f'N={N}')
+    #print(f'N={N}')
     print(f'evaluated at N_g={N_past} and the integral is {integral}')
     return np.log(n_p) - np.log(2*N_past) + np.sum(np.log(1-1/2*N)) + np.log(integral)
 
@@ -84,7 +84,7 @@ def log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, maxGen, n_p):
 
 
 def loss_func(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
-    #print(f'calculate loss for N={N}')
+    print(f'calculate loss for N={N}')
     G = len(N)
     gen = np.arange(1, G+1)
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
