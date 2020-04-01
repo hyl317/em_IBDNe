@@ -64,7 +64,7 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     #gradientChecker(N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)
     bnds = [(1000, 10000000) for n in N]
     result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha, chr_len_cM), 
-                      method='L-BFGS-B',  bounds=bnds)
+                      method='L-BFGS-B', bounds=bnds, options={'maxfun':100000})
     print(result, flush=True)
     return result.x
 
@@ -77,14 +77,14 @@ def log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, maxGen, n_p):
     N_past = N[-1]
     integral, err = quad(partB, maxGen+1, np.inf, args=(N_past, maxGen, C, chr_len_cM))
     #print(f'N={N}')
-    print(f'evaluated at N_g={N_past} and the integral is {integral}')
-    return np.log(n_p) - np.log(2*N_past) + np.sum(np.log(1-1/2*N)) + np.log(integral)
+    #print(f'evaluated at N_g={N_past} and the integral is {integral}')
+    return np.log(n_p) - np.log(2*N_past) + np.sum(np.log(1-1/(2*N))) + np.log(integral)
 
 
 
 
 def loss_func(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
-    print(f'calculate loss for N={N}')
+    #print(f'calculate loss for N={N}')
     G = len(N)
     gen = np.arange(1, G+1)
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
