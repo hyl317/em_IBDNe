@@ -5,13 +5,11 @@ from misc import *
 from scipy.optimize import minimize
 from scipy.ndimage.interpolation import shift
 from scipy.integrate import quad
-#from numba import jit
 import sys
 
 C = 2
 
 
-#@jit(parallel=True)
 def updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))
@@ -48,7 +46,6 @@ def updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     return T1, T2
 
 
-#@jit(parallel=True)
 def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha, chr_len_cM):
     log_total_len_each_bin1 = np.log(bin1) + np.log(bin_midPoint1)
     log_total_len_each_bin2 = np.log(bin2) + np.log(bin_midPoint2)
@@ -61,7 +58,7 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     log_numerator = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
 
     #a penalized optimization approach
-    #gradientChecker(N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)
+    gradientChecker(N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)
     bnds = [(1000, 10000000) for n in N]
     result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha, chr_len_cM), 
                       method='L-BFGS-B', bounds=bnds, options={'maxfun':100000})
@@ -84,7 +81,6 @@ def log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, maxGen, n_p):
 
 
 def loss_func(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
-    #print(f'calculate loss for N={N}')
     G = len(N)
     gen = np.arange(1, G+1)
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
@@ -95,7 +91,7 @@ def loss_func(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
     return np.sum(diff_obs_expectation**2/np.exp(log_obs)) + penalty
 
 
-def jacobian(N, log_obs, log_term3, n_p, alpha):
+def jacobian(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
     maxGen = len(N)
     jacMatrix = np.zeros((maxGen, maxGen))
 
@@ -109,6 +105,21 @@ def jacobian(N, log_obs, log_term3, n_p, alpha):
     for g in range(2, maxGen+1):
         jacMatrix[g-1,:g-1] = np.exp(log_common_terms[g-1] - np.log(2*N[g-1]) - np.log(1-1/(2*N[:g-1])) 
                                      + np.log(0.5) - 2*np.log(N[:g-1]))
+
+    #now we calculate gradient of expected IBD coalesced beyond maxGen
+    #and append this row to jacMatrix
+    expIBD_beyond_maxGen_derivative_to_N_t = np.full(maxGen, np.nan)
+    log_expIBD_beyond_maxGen_given_Ne = log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, maxGen, n_p)
+    expIBD_beyond_maxGen_derivative_to_N_t[:maxGen-1] = np.exp(log_expIBD_beyond_maxGen_given_Ne 
+                                                    - np.log(1-1/(2*N[:,-1])) + np.log(0.5) - 2*np.log(N[:,-1]))
+    #use definition of gradient to approximate derivative wrt N_G (analytic form hard to obtain)
+    epsilon = 1e-6
+    upper = np.exp(log_expectedIBD_beyond_maxGen_given_Ne(N + epsilon*np.eye(maxGen)[-1], chr_len_cM, maxGen, n_p))
+    lower = np.exp(log_expectedIBD_beyond_maxGen_given_Ne(N - epsilon*np.eye(maxGen)[-1], chr_len_cM, maxGen, n_p))
+    expIBD_beyond_maxGen_derivative_to_N_t[-1] = (upper - lower)/(2*epsilon)
+
+    #append the last row to jaxMatrix
+    jacMatrix = np.append(jacMatrix, expIBD_beyond_maxGen_derivative_to_N_t.reshape(1, maxGen), axis=0)
 
     #summing up
     log_expectation = log_common_terms - np.log(2*N)
@@ -142,14 +153,14 @@ def testExpectation(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2):
 
 
 #test gradient calculation for loss_func in EMbyMoment.py
-def gradientChecker(N, log_obs, log_term3, n_p, alpha):
+def gradientChecker(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
     delta = 1e-6
     maxGen = N.size
-    calculated = jacobian(N, log_obs, log_term3, n_p, alpha)
+    calculated = jacobian(N, log_obs, log_term3, n_p, alpha, chr_len_cM)
     gradient = np.zeros(maxGen)
     for g in np.arange(maxGen):
         #print(np.eye(maxGen)[g])
-        upper, lower = loss_func(N + delta*np.eye(maxGen)[g], log_obs, log_term3, n_p, alpha), loss_func(N - delta*np.eye(maxGen)[g], log_obs, log_term3, n_p, alpha)
+        upper, lower = loss_func(N + delta*np.eye(maxGen)[g], log_obs, log_term3, n_p, alpha, chr_len_cM), loss_func(N - delta*np.eye(maxGen)[g], log_obs, log_term3, n_p, alpha, chr_len_cM)
         gradient[g] = (upper - lower)/(2*delta)
         print(f'diff between up and low: {upper-lower}')
     print(f'calculated gradient is: {calculated}')
