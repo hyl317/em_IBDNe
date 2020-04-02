@@ -58,10 +58,10 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     log_numerator = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
 
     #a penalized optimization approach
-    gradientChecker(N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha)
+    #gradientChecker(N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha, chr_len_cM)
     bnds = [(1000, 10000000) for n in N]
     result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha, chr_len_cM), 
-                      method='L-BFGS-B', bounds=bnds, options={'maxfun':100000})
+                      method='L-BFGS-B', bounds=bnds, jac=jacobian)
     print(result, flush=True)
     return result.x
 
@@ -111,7 +111,7 @@ def jacobian(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
     expIBD_beyond_maxGen_derivative_to_N_t = np.full(maxGen, np.nan)
     log_expIBD_beyond_maxGen_given_Ne = log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, maxGen, n_p)
     expIBD_beyond_maxGen_derivative_to_N_t[:maxGen-1] = np.exp(log_expIBD_beyond_maxGen_given_Ne 
-                                                    - np.log(1-1/(2*N[:,-1])) + np.log(0.5) - 2*np.log(N[:,-1]))
+                                                    - np.log(1-1/(2*N[:-1])) + np.log(0.5) - 2*np.log(N[:-1]))
     #use definition of gradient to approximate derivative wrt N_G (analytic form hard to obtain)
     epsilon = 1e-6
     upper = np.exp(log_expectedIBD_beyond_maxGen_given_Ne(N + epsilon*np.eye(maxGen)[-1], chr_len_cM, maxGen, n_p))
@@ -122,7 +122,10 @@ def jacobian(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
     jacMatrix = np.append(jacMatrix, expIBD_beyond_maxGen_derivative_to_N_t.reshape(1, maxGen), axis=0)
 
     #summing up
-    log_expectation = log_common_terms - np.log(2*N)
+    log_expectation = np.full(maxGen+1, np.nan)
+    log_expectation[:-1] = log_common_terms - np.log(2*N)
+    log_expectation[-1] = log_expIBD_beyond_maxGen_given_Ne
+    
     chain_part1 = 2*(np.exp(log_expectation)-np.exp(log_obs))/np.exp(log_obs)
     chi2_term = np.sum(jacMatrix*chain_part1[:,np.newaxis], axis=0)
 
