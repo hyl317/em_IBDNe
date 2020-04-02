@@ -20,5 +20,7 @@ def log_partB(g, N_g, maxGen, C, chromLen):
     return np.exp(part1 + part2 + np.log(part3))
 
 
-integral, err = quad(log_partB, maxGen+1, np.inf, args=(N_past, maxGen, C, chromLen))
-print(integral)
+integral1, err2 = quad(log_partB, maxGen+1, np.inf, args=(N_past, maxGen, C, chromLen))
+integral2, err2 = quad(log_partB, maxGen+2, np.inf, args=(N_past, maxGen, C, chromLen))
+print(integral1)
+print(integral2)
