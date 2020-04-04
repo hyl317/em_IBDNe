@@ -7,7 +7,7 @@
 ##SBATCH --nodelist=cbsubscb09
 ##SBATCH --chdir=/fs/cbsubscb09/storage/yilei/simulate/chrom
 #SBATCH --job-name=ibdne
-#SBATCH --output=ibdne.fin.out.%j
+#SBATCH --output=ibdne.eur.ts.out.%j
 ##SBATCH --array=1-22
 #SBATCH --mail-user=yh362@cornell.edu
 #SBATCH --mail-type=ALL
@@ -21,4 +21,4 @@ if [ ! -d /fs/cbsubscb09/storage/yilei/simulate/chrom ]; then
   /programs/bin/labutils/mount_server cbsubscb09 /storage
 fi
 
-python3 em_IBDNe.py -i ../../../simulate/chrom/FIN.hapibd.ibd.gz -e endMarker.averageMap.txt --alpha 0.1 -o ibdne.fin.tail --max_iter 1000 > test.fin.tail
+python3 em_IBDNe.py -i ../../../simulate/extractIBD/Dominic/EUR.ts.100.ibd.gz -e endMarker.ts.txt --alpha 0.05 -o ibdne.eur.ts.tail --max_iter 1000 -G 100 > test.eur.ts.tail
