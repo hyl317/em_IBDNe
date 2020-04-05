@@ -4,12 +4,13 @@ import bisect
 import argparse
 
 
-def process_ibd_hbd(ibd, hbd, bin, num_haps):
+def process_ibd_hbd(ibd, hbd, bins, num_haps):
     #read ibd.gz and hbd.gz file
     #return effective sample size for each bin and mean number of IBD segments in each bin
 
     hapPair2Index = {}
-    IBD_matrix = np.zeros((num_haps*(num_haps-1)/2, len(bin)))
+    n_pairs = num_haps*(num_haps-1)/2
+    IBD_matrix = np.zeros((n_pairs, len(bins)))
     count = 0
 
     with gzip.open(ibd, 'rt') as ibd:
@@ -22,8 +23,8 @@ def process_ibd_hbd(ibd, hbd, bin, num_haps):
             haplotype1, haplotype2 = sorted(haplotype1, haplotype2)
             hapPair = haplotype1 + ':' + haplotype2
             
-            tmp = bisect.bisect_left(bin, len_cM)
-            pos = tmp-1 if (bin[tmp] != len_cM) else tmp
+            tmp = bisect.bisect_left(bins, len_cM)
+            pos = tmp-1 if (bins[tmp] != len_cM) else tmp
 
             if hapPair not in hapPair2Index:
                 hapPair2Index[hapPair] = count
@@ -44,8 +45,8 @@ def process_ibd_hbd(ibd, hbd, bin, num_haps):
             haplotype1, haplotype2 = sorted(haplotype1, haplotype2)
             hapPair = haplotype1 + ':' + haplotype2
             
-            tmp = bisect.bisect_left(bin, len_cM)
-            pos = tmp-1 if (bin[tmp] != len_cM) else tmp
+            tmp = bisect.bisect_left(bins, len_cM)
+            pos = tmp-1 if (bins[tmp] != len_cM) else tmp
 
             if hapPair not in hapPair2Index:
                 hapPair2Index[hapPair] = count
@@ -56,10 +57,19 @@ def process_ibd_hbd(ibd, hbd, bin, num_haps):
 
             line = hbd.readline()
 
+    N_REPEAT = 10000
+    bootstrap_variance = np.zeros(len(bins))
+    for j in np.arange(len(bins)):
+        bootstrapped_mean = np.zeros(N_REPEAT)
+        for rep in np.arange(N_REPEAT):
+            samples = IBD_matrix[:,j].flatten()
+            resample = np.random.choice(samples, n_pairs, replace=True)
+            bootstrapped_mean[rep] = np.mean(resample)
+        bootstrap_variance[j] = np.var(bootstrapped_mean)
+
     #now IBD_matrix is filled
     mean = np.apply_along_axis(np.mean, 0, IBD_matrix)
-    var = np.apply_along_axis(np.var, 0, IBD_matrix)
-    return mean/var, mean
+    return mean/bootstrap_variance, mean
 
 def main():
     parser = argparse.ArgumentParser()
