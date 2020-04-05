@@ -9,7 +9,8 @@ def process_ibd_hbd(ibd, hbd, bin, num_haps):
     #return effective sample size for each bin and mean number of IBD segments in each bin
 
     hapPair2Index = {}
-    IBD_matrix = np.zeros((num_haps*(num_haps-1)/2, len(bin)))
+    num_pairs = int(num_haps*(num_haps-1)/2)
+    IBD_matrix = np.zeros((num_pairs, len(bin)))
     count = 0
 
     with gzip.open(ibd, 'rt') as ibd:
@@ -19,18 +20,18 @@ def process_ibd_hbd(ibd, hbd, bin, num_haps):
             chr, start_bp, end_bp, len_cM = int(chr), int(start_bp), int(end_bp), float(len_cM)
             haplotype1 = ind1 + '_' + hap1
             haplotype2 = ind2 + '_' + hap2
-            haplotype1, haplotype2 = sorted(haplotype1, haplotype2)
+            haplotype1, haplotype2 = sorted([haplotype1, haplotype2])
             hapPair = haplotype1 + ':' + haplotype2
             
             tmp = bisect.bisect_left(bin, len_cM)
-            pos = tmp-1 if (bin[tmp] != len_cM) else tmp
+            pos = tmp if (tmp < len(bin) and bin[tmp] == len_cM) else tmp-1
 
             if hapPair not in hapPair2Index:
                 hapPair2Index[hapPair] = count
                 IBD_matrix[count, pos] += 1
                 count += 1
             else:
-                IBD_matrix[hapPairIndex[hapPair], pos] += 1
+                IBD_matrix[hapPair2Index[hapPair], pos] += 1
 
             line = ibd.readline()
 
@@ -41,18 +42,18 @@ def process_ibd_hbd(ibd, hbd, bin, num_haps):
             chr, start_bp, end_bp, len_cM = int(chr), int(start_bp), int(end_bp), float(len_cM)
             haplotype1 = ind1 + '_' + hap1
             haplotype2 = ind2 + '_' + hap2
-            haplotype1, haplotype2 = sorted(haplotype1, haplotype2)
+            haplotype1, haplotype2 = sorted([haplotype1, haplotype2])
             hapPair = haplotype1 + ':' + haplotype2
             
             tmp = bisect.bisect_left(bin, len_cM)
-            pos = tmp-1 if (bin[tmp] != len_cM) else tmp
+            pos = tmp if (tmp < len(bin) and bin[tmp] == len_cM) else tmp-1
 
             if hapPair not in hapPair2Index:
                 hapPair2Index[hapPair] = count
                 IBD_matrix[count, pos] += 1
                 count += 1
             else:
-                IBD_matrix[hapPairIndex[hapPair], pos] += 1
+                IBD_matrix[hapPair2Index[hapPair], pos] += 1
 
             line = hbd.readline()
 
@@ -71,4 +72,8 @@ def main():
     bin = [2, 3, 4, 5, 6, 7, 8, 9, 10]
     effective_sample_size, mean_IBD_count = process_ibd_hbd(args.ibd, args.hbd, bin, args.n)
     print(f'effective_sample_size={effective_sample_size}')
-    print(f'mean={mean_IBD_count}')
+    print(f'mean={np.flip(np.cumsum(np.flip(mean_IBD_count)))}')
+
+if __name__ == '__main__':
+    main()
+
