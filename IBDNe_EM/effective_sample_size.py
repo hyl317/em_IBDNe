@@ -2,6 +2,7 @@ import numpy as np
 import gzip
 import bisect
 import argparse
+from scipy.special import logsumexp
 
 L = 3500 #set total genome length to be 3500cM
 
@@ -71,7 +72,7 @@ def process_ibd_hbd(ibd, hbd, bins, num_haps):
 
             line = hbd.readline()
 
-    N_REPEAT = 100
+    N_REPEAT = 10
     bootstrap_variance = np.zeros(len(bins))
     for j in np.arange(len(bins)):
         print(f'bootstrap for bin {j}')
@@ -104,6 +105,7 @@ def main():
 
     #if reference Ne trajectory is provided, calculate the expected number of IBD segments
     if args.N != None:
+        N = []
         with open(args.N) as file_N:
             line = file_N.readline()
             while line:
