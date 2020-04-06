@@ -21,4 +21,4 @@ if [ ! -d /fs/cbsubscb09/storage/yilei/simulate/chrom ]; then
   /programs/bin/labutils/mount_server cbsubscb09 /storage
 fi
 
-python3 em_IBDNe.py -i ../../../simulate/extractIBD/Dominic/EUR.ts.100.ibd.gz -e endMarker.ts.txt --alpha 0.05 -o ibdne.eur.ts.tail --max_iter 1000 -G 100 > test.eur.ts.tail
+python3 em_IBDNe.py -i ../../../simulate/extractIBD/Dominic/EUR.ts.200.ibd.gz -e endMarker.ts.txt --alpha 0.01 -o ibdne.eur.ts_200.100.tail --max_iter 1000 -G 100 > test.eur.ts_200.100.tail

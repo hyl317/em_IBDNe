@@ -9,7 +9,7 @@ def process_ibd_hbd(ibd, hbd, bins, num_haps):
     #return effective sample size for each bin and mean number of IBD segments in each bin
 
     hapPair2Index = {}
-    n_pairs = num_haps*(num_haps-1)/2
+    n_pairs = int(num_haps*(num_haps-1)/2)
     IBD_matrix = np.zeros((n_pairs, len(bins)))
     count = 0
 
@@ -23,8 +23,8 @@ def process_ibd_hbd(ibd, hbd, bins, num_haps):
             haplotype1, haplotype2 = sorted([haplotype1, haplotype2])
             hapPair = haplotype1 + ':' + haplotype2
             
-            tmp = bisect.bisect_left(bin, len_cM)
-            pos = tmp if (tmp < len(bin) and bin[tmp] == len_cM) else tmp-1
+            tmp = bisect.bisect_left(bins, len_cM)
+            pos = tmp if (tmp < len(bins) and bins[tmp] == len_cM) else tmp-1
 
             if hapPair not in hapPair2Index:
                 hapPair2Index[hapPair] = count
@@ -45,8 +45,8 @@ def process_ibd_hbd(ibd, hbd, bins, num_haps):
             haplotype1, haplotype2 = sorted([haplotype1, haplotype2])
             hapPair = haplotype1 + ':' + haplotype2
             
-            tmp = bisect.bisect_left(bin, len_cM)
-            pos = tmp if (tmp < len(bin) and bin[tmp] == len_cM) else tmp-1
+            tmp = bisect.bisect_left(bins, len_cM)
+            pos = tmp if (tmp < len(bins) and bins[tmp] == len_cM) else tmp-1
 
             if hapPair not in hapPair2Index:
                 hapPair2Index[hapPair] = count
@@ -57,9 +57,10 @@ def process_ibd_hbd(ibd, hbd, bins, num_haps):
 
             line = hbd.readline()
 
-    N_REPEAT = 10000
+    N_REPEAT = 100
     bootstrap_variance = np.zeros(len(bins))
     for j in np.arange(len(bins)):
+        print(f'bootstrap for bin {j}')
         bootstrapped_mean = np.zeros(N_REPEAT)
         for rep in np.arange(N_REPEAT):
             samples = IBD_matrix[:,j].flatten()
