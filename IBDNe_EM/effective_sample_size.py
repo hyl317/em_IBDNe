@@ -31,7 +31,7 @@ def fit_mle_N(N_eff, mean_IBD_count, total_genome_length, bins, G, alpha):
     init_N = initializeN_autoreg(G)
     print(f'N_eff: {N_eff}', flush=True)
     print(f'value of obj function at random start: {neg_loglikelihood(init_N, N_eff, mean_IBD_count, total_genome_length, bins, alpha)}', flush=True)
-    result = minimize(neg_loglikelihood, init_N, args=(N_eff, mean_IBD_count, total_genome_length, bins, alpha), method='Powell', options={'maxfev':1e7})
+    result = minimize(neg_loglikelihood, init_N, args=(N_eff, mean_IBD_count, total_genome_length, bins, alpha), method='L-BFGS-B', options={'maxfun':1e7})
     print(result)
     return result.x
 
@@ -116,7 +116,7 @@ def process_ibd_hbd(ibd, hbd, endMarkers, bins, num_haps):
 
             line = hbd.readline()
 
-    N_REPEAT = 10
+    N_REPEAT = 10000
     bootstrap_variance = np.zeros(len(bins))
     for j in np.arange(len(bins)):
         print(f'bootstrap for bin {j}', flush=True)
@@ -176,7 +176,7 @@ def main():
                 line = file_N.readline()
         N = np.array(N)
         val = neg_loglikelihood(N, effective_sample_size, mean_IBD_count, total_genome_length, bins, args.alpha)
-        print(f'obj evaluated at ref Ne is: {}')
+        print(f'obj evaluated at ref Ne is: {val}', flush=True)
 
 
     N = fit_mle_N(effective_sample_size, mean_IBD_count, total_genome_length, bins, args.G, args.alpha)
