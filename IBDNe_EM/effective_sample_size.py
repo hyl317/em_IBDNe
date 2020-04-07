@@ -152,7 +152,7 @@ def main():
     parser.add_argument('-G', action='store', dest='G', type=int, required=False, default=200, help='maximum number of generations to infer')
     parser.add_argument('--alpha', action='store', dest='alpha', type=float, required=False, default=0.01, help='alpha')
     parser.add_argument('--bins', action="store", dest='bins', type=str, required=False)
-    #parser.add_argument('-N', action="store", dest="N", type=str, required=False, help="path to file containing reference population size")
+    parser.add_argument('-N', action="store", dest="N", type=str, required=False, help="path to file containing reference population size")
     args = parser.parse_args()
 
     bins = []
@@ -163,21 +163,26 @@ def main():
         bins = [float(p) for p in tmp]
 
     effective_sample_size, mean_IBD_count, total_genome_length = process_ibd_hbd(args.ibd, args.hbd, args.end, bins, args.n)
+
+    #if reference Ne trajectory is provided, calculate the value of the obj function evaluated at the reference Ne
+    if args.N != None:
+        N = []
+        with open(args.N) as file_N:
+            line = file_N.readline()
+            while line:
+                gen, Ne = line.strip().split('\t')
+                Ne = float(Ne)
+                N.append(Ne)
+                line = file_N.readline()
+        N = np.array(N)
+        val = neg_loglikelihood(N, effective_sample_size, mean_IBD_count, total_genome_length, bins, args.alpha)
+        print(f'obj evaluated at ref Ne is: {}')
+
+
     N = fit_mle_N(effective_sample_size, mean_IBD_count, total_genome_length, bins, args.G, args.alpha)
     print(f'mle fitted Ne trajectory: {N}', flush=True)
-    #calculate expected number of IBD segments
-    #if reference Ne trajectory is provided, calculate the expected number of IBD segments
-    #if args.N != None:
-    #    N = []
-    #    with open(args.N) as file_N:
-    #        line = file_N.readline()
-    #        while line:
-    #            gen, Ne = line.strip().split('\t')
-    #            Ne = float(Ne)
-    #            N.append(Ne)
-    #            line = file_N.readline()
-    #    N = np.array(N)
 
+    
     #    expected_IBD_count = [expectation_num_segment(N, b, total_genome_length) for b in bins]
 
 
