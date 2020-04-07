@@ -20,16 +20,16 @@ def expectation_num_segment(N, u, total_genome_length):
     return total_genome_length*(np.exp(log_term1)+np.exp(log_term2))
 
 #probably need to add a regularization term
-def neg_loglikelihood(N, N_eff, mean_IBD_count, total_genome_length, bins, alpha):
-    cumulative_expexted_IBD_count = [expectation_num_segment(N, b, total_genome_length) for b in bins]
-    expected_IBD_count = cumulative_expected_IBD_count - shift(cumulative_expected_IBD, -1, cval=0)
+def neg_loglikelihood(N, N_eff, mean_IBD_count, total_genome_length, bins):
+    cumulative_expected_IBD_count = [expectation_num_segment(N, b, total_genome_length) for b in bins]
+    expected_IBD_count = cumulative_expected_IBD_count - shift(cumulative_expected_IBD_count, -1, cval=0)
     loglike = np.sum(N_eff*(mean_IBD_count*np.log(expected_IBD_count)-expected_IBD_count))
     penalty = alpha*np.sum(np.diff(N, n=2)**2)
     return -loglike + penalty
 
 def fit_mle_N(N_eff, mean_IBD_count, total_genome_length, bins, G, alpha):
     init_N = initializeN_autoreg(G)
-    result = minimize(neg_loglikelihood, init_N, args=(N_eff, mean_IBD_count, toal_genome_length, bins, alpha),
+    result = minimize(neg_loglikelihood, init_N, args=(N_eff, mean_IBD_count, total_genome_length, bins, alpha,
                      method='Powell')
     print(result)
     return result.x
@@ -115,7 +115,7 @@ def process_ibd_hbd(ibd, hbd, endMarkers, bins, num_haps):
 
             line = hbd.readline()
 
-    N_REPEAT = 10000
+    N_REPEAT = 10
     bootstrap_variance = np.zeros(len(bins))
     for j in np.arange(len(bins)):
         print(f'bootstrap for bin {j}')
