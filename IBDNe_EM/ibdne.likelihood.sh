@@ -21,4 +21,4 @@ if [ ! -d /fs/cbsubscb09/storage/yilei/simulate/chrom ]; then
   /programs/bin/labutils/mount_server cbsubscb09 /storage
 fi
 
-python3 effective_sample_size.py -e endMarker.ts.txt -n 2000 -N ~/EUR.ref.ne.200.txt --ibd ../../../simulate/extractIBD/Dominic/EUR.ts.200.ibd.gz --hbd ../../../simulate/extractIBD/Dominic/EUR.ts.200.hbd.gz --bins 2,2.5,3,3.5,4,4.5,5,5.5,6,7,8,9,10
+python3 effective_sample_size.py -e endMarker.ts.txt -n 2000 --ibd ../../../simulate/extractIBD/Dominic/EUR.ts.200.ibd.gz --hbd ../../../simulate/extractIBD/Dominic/EUR.ts.200.hbd.gz --bins 2,2.5,3,3.5,4,4.5,5,5.5,6,7,8,9,10,15,20,30,40,50
