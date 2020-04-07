@@ -31,7 +31,7 @@ def process_ibd_hbd(ibd, hbd, endMarkers, bins, num_haps):
     endMarker_bp = {}
     endMarker_cM = {}
 
-    with open(end_marker) as end:
+    with open(endMarkers) as end:
         line = end.readline()
         while line:
             chr, rate, cM, phy = line.strip().split('\t')
@@ -98,7 +98,7 @@ def process_ibd_hbd(ibd, hbd, endMarkers, bins, num_haps):
 
             line = hbd.readline()
 
-    N_REPEAT = 10
+    N_REPEAT = 10000
     bootstrap_variance = np.zeros(len(bins))
     for j in np.arange(len(bins)):
         print(f'bootstrap for bin {j}')
@@ -111,13 +111,15 @@ def process_ibd_hbd(ibd, hbd, endMarkers, bins, num_haps):
 
     #now IBD_matrix is filled
     count_total_IBD = np.apply_along_axis(np.sum, 0, IBD_matrix)
-    tmp = np.copy(count_total_IBD)
     count_uncensored_IBD = count_total_IBD - IBD_count_censored
+    tmp = np.copy(count_uncensored_IBD)
 
     #redistribute censored IBD into bins
     frac = count_total_IBD/np.sum(count_total_IBD)
+    print(f'frac is {frac}')
     for b, count in enumerate(IBD_count_censored):
-        tmp += (count*frac[b:])/np.sum(frac[b:])
+        print(f'count is {count}, redistributed count is {(count*frac[b:])/np.sum(frac[b:])}')
+        tmp[b:] += (count*frac[b:])/np.sum(frac[b:])
 
     mean = tmp/n_pairs
 
@@ -127,7 +129,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--ibd', action="store", dest="ibd", type=str, required=True)
     parser.add_argument('--hbd', action="store", dest="hbd", type=str, required=True)
-    parser.add_argument('-e', action='store', dest='end', type='str', required=True, help="path to files of end markers")
+    parser.add_argument('-e', action='store', dest='end', type=str, required=True, help="path to files of end markers")
     parser.add_argument('-n', action="store", dest='n', type=int, required=True, help="number of haplotypes")
     parser.add_argument('--bins', action="store", dest='bins', type=str, required=False)
     parser.add_argument('-N', action="store", dest="N", type=str, required=False, help="path to file containing reference population size")
