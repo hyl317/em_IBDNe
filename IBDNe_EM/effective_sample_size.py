@@ -29,8 +29,7 @@ def neg_loglikelihood(N, N_eff, mean_IBD_count, total_genome_length, bins):
 
 def fit_mle_N(N_eff, mean_IBD_count, total_genome_length, bins, G, alpha):
     init_N = initializeN_autoreg(G)
-    result = minimize(neg_loglikelihood, init_N, args=(N_eff, mean_IBD_count, total_genome_length, bins, alpha,
-                     method='Powell')
+    result = minimize(neg_loglikelihood, init_N, args=(N_eff, mean_IBD_count, total_genome_length, bins, alpha), method='Powell')
     print(result)
     return result.x
 
