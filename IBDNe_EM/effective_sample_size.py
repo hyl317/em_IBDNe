@@ -3,19 +3,35 @@ import gzip
 import bisect
 import argparse
 from scipy.special import logsumexp
+from misc import initializeN_autoreg
+from scipy.ndimage.interpolation import shift
+from scipy.optimize import minimize
 
 def expectation_num_segment(N, u, total_genome_length):
     G = len(N)
     gen = np.arange(1, G+1)
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))
     log_term1 = logsumexp(np.log(gen/50)-u*gen/50 - np.log(2*N) + sum_log_prob_not_coalesce[:-1])
-
+    
     N_G = N[-1]
     alpha = np.log(1-1/(2*N_G))-u/50
 
     log_term2 = -np.log(100*N_G) + sum_log_prob_not_coalesce[-1] + (G+1)*(np.log(2*N_G)-np.log(2*N_G-1)) + alpha*(G+1) + np.log(1+G*(1-np.exp(alpha))) - 2*np.log(1-np.exp(alpha))
     return total_genome_length*(np.exp(log_term1)+np.exp(log_term2))
 
+#probably need to add a regularization term
+def neg_loglikelihood(N, N_eff, mean_IBD_count, total_genome_length, bins):
+    cumulative_expexted_IBD_count = [expectation_num_segment(N, b, total_genome_length) for b in bins]
+    expected_IBD_count = cumulative_expected_IBD_count - shift(cumulative_expected_IBD, -1, cval=0)
+    loglike = np.sum(N_eff*(mean_IBD_count*np.log(expected_IBD_count)-expected_IBD_count))
+    return -loglike
+
+def fit_mle_N(N_eff, mean_IBD_count, total_genome_length, bins, G):
+    init_N = initializeN_autoreg(G)
+    result = minimize(neg_loglikelihood, init_N, args=(N_eff, mean_IBD_count, toal_genome_length, bins),
+                     method='Powell')
+    print(result)
+    return mle_N.x
 
 def process_ibd_hbd(ibd, hbd, endMarkers, bins, num_haps):
     #read ibd.gz and hbd.gz file
@@ -131,6 +147,7 @@ def main():
     parser.add_argument('--hbd', action="store", dest="hbd", type=str, required=True)
     parser.add_argument('-e', action='store', dest='end', type=str, required=True, help="path to files of end markers")
     parser.add_argument('-n', action="store", dest='n', type=int, required=True, help="number of haplotypes")
+    parser.add_argument('-G', action='store', dest='G', type=int, required=False, default=200, help='maximum number of generations to infer')
     parser.add_argument('--bins', action="store", dest='bins', type=str, required=False)
     parser.add_argument('-N', action="store", dest="N", type=str, required=False, help="path to file containing reference population size")
     args = parser.parse_args()
@@ -143,26 +160,27 @@ def main():
         bins = [float(p) for p in tmp]
 
     effective_sample_size, mean_IBD_count, total_genome_length = process_ibd_hbd(args.ibd, args.hbd, args.end, bins, args.n)
-
+    N = fit_mle_N(effective_sample_size, mean_IBD_count, total_genome_length, bins, args.G)
+    print(f'mle fitted Ne trajectory: {N}')
     #calculate expected number of IBD segments
     #if reference Ne trajectory is provided, calculate the expected number of IBD segments
-    if args.N != None:
-        N = []
-        with open(args.N) as file_N:
-            line = file_N.readline()
-            while line:
-                gen, Ne = line.strip().split('\t')
-                Ne = float(Ne)
-                N.append(Ne)
-                line = file_N.readline()
-        N = np.array(N)
+    #if args.N != None:
+    #    N = []
+    #    with open(args.N) as file_N:
+    #        line = file_N.readline()
+    #        while line:
+    #            gen, Ne = line.strip().split('\t')
+    #            Ne = float(Ne)
+    #            N.append(Ne)
+    #            line = file_N.readline()
+    #    N = np.array(N)
 
-        expected_IBD_count = [expectation_num_segment(N, b, total_genome_length) for b in bins]
+    #    expected_IBD_count = [expectation_num_segment(N, b, total_genome_length) for b in bins]
 
 
-    print(f'mean: {np.flip(np.cumsum(np.flip(mean_IBD_count)))}')
-    if args.N != None:
-        print(f'expected: {expected_IBD_count}')
+    #print(f'mean: {np.flip(np.cumsum(np.flip(mean_IBD_count)))}')
+    #if args.N != None:
+    #    print(f'expected: {expected_IBD_count}')
     
 
 if __name__ == '__main__':
