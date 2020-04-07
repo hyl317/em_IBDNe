@@ -157,7 +157,11 @@ def main():
 
     bins = []
     if args.bins == None:
-        bins = [2, 3, 4, 5, 6, 7, 8, 9, 10]
+        interval1 = np.arange(2,4,0.05)
+        interval2 = np.arange(4,6,0.1)
+        interval3 = np.arange(6,10,0.5)
+        interval4 = np.append(np.arange(10,100,10), 100)
+        bins = np.concatenate((interval1, interval2, interval3, interval4))
     else:
         tmp = args.bins.strip().split(',')
         bins = [float(p) for p in tmp]
