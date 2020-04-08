@@ -3,7 +3,7 @@ import gzip
 import bisect
 import argparse
 from scipy.special import logsumexp
-from misc import initializeN_autoreg
+from misc import initializeN_autoreg, refEurNe
 from scipy.ndimage.interpolation import shift
 from scipy.optimize import minimize
 
@@ -24,12 +24,14 @@ def neg_loglikelihood(N, N_eff, mean_IBD_count, total_genome_length, bins, alpha
     cumulative_expected_IBD_count = [expectation_num_segment(N, b, total_genome_length) for b in bins]
     expected_IBD_count = cumulative_expected_IBD_count - shift(cumulative_expected_IBD_count, -1, cval=0)
     loglike = np.sum(N_eff*(mean_IBD_count*np.log(expected_IBD_count)-expected_IBD_count))
-    penalty = alpha*np.sum(np.diff(N, n=2)**2)
-    return -loglike + penalty
+    penalty = alpha*np.sum(np.diff(N, n=1)**2)
+    return 1e2*(-loglike + penalty)
 
 def fit_mle_N(N_eff, mean_IBD_count, total_genome_length, bins, G, alpha):
-    init_N = initializeN_autoreg(G)
-    print(f'N_eff: {N_eff}', flush=True)
+    init_N = initializeN_autoreg(G, 300000)
+    #init_N = refEurNe(G)
+    #print(f'N_eff: {N_eff}', flush=True)
+    print(f'init_N: {init_N}')
     print(f'value of obj function at random start: {neg_loglikelihood(init_N, N_eff, mean_IBD_count, total_genome_length, bins, alpha)}', flush=True)
     result = minimize(neg_loglikelihood, init_N, args=(N_eff, mean_IBD_count, total_genome_length, bins, alpha), method='L-BFGS-B', options={'maxfun':1e7})
     print(result)
@@ -116,7 +118,7 @@ def process_ibd_hbd(ibd, hbd, endMarkers, bins, num_haps):
 
             line = hbd.readline()
 
-    N_REPEAT = 10000
+    N_REPEAT = 100
     bootstrap_variance = np.zeros(len(bins))
     for j in np.arange(len(bins)):
         print(f'bootstrap for bin {j}', flush=True)

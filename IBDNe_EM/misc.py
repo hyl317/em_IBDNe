@@ -60,27 +60,27 @@ def refFinNe():
         N.insert(0, N_curr)
     return np.array(N)
 
-#FOR TESTING PURPOSE: return a numpy array of the reference EUR effective population size over the past 100 generations
+#FOR TESTING PURPOSE: return a numpy array of the reference EUR effective population size over the past 200 generations
 
-def refEurNe():
-    eur_N_0 = 7.13e+04
+def refEurNe(G):
+    eur_N_0 = 491325
     eur_growth_rate = 0.0195
     eur_N_curr = eur_N_0
     N = [eur_N_0]
-    for g in np.arange(99, 0, -1):
-        eur_N_curr = eur_N_curr*(np.exp(eur_growth_rate))
-        N.insert(0, eur_N_curr)
+    for g in np.arange(G-1, 0, -1):
+        eur_N_curr = eur_N_curr*(np.exp(-eur_growth_rate))
+        N.append(eur_N_curr)
     return np.array(N)
 
 
 def initializeN_Uniform(maxGen, Ne):
     return np.full(maxGen, Ne)
 
-def initializeN_autoreg(maxGen):
+def initializeN_autoreg(maxGen, mean=1e4):
     #initialize N, the population size trajectory
     phi = 0.98
     ar = np.array([1, -phi])
-    MU, sigma = math.log(10000), math.log(10000)/10
+    MU, sigma = math.log(mean), math.log(mean)/100
     #specify a AR(1) model, by default the mean 0 since it's a stationary time series
     N = sm.tsa.arma_generate_sample(ar, np.array([1]), maxGen, scale=math.sqrt(1-phi**2)*sigma)
     return np.exp(N + MU) #now N has mean 10,000
