@@ -6,7 +6,7 @@ from EM_moment import *
 from EM_moment_tail import *
 from plotting import *
 from preprocess import *
-
+from EM_by_count import *
 def main():
     parser = argparse.ArgumentParser(description='IBDNe with Composite Likeilhood and EM.')
     parser.add_argument('-G', action="store", dest="maxGen", type=int, required=False, default=100, 

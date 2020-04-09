@@ -2,6 +2,7 @@
 import gzip
 import numpy as np
 import math
+import bisect
 
 BIN_SIZE = 0.05
 
@@ -65,7 +66,7 @@ def processIBD(ibd_gz, end_marker):
     return bin1, bin2, bin_midPoint1, bin_midPoint2, np.array(chr_len_cM), len(inds)
 
 
-def processIBDandBinning(ibd_gz, endMarker):
+def processIBDandBinning(ibd_gz, end_marker):
     endMarker_bp = {}
     endMarker_cM = {}
 
