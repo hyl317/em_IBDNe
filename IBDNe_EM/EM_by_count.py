@@ -42,6 +42,8 @@ def em_by_count(IBD_count_by_bin, bins, total_genome_length, numInds, maxGen, al
 
     numIter = 1
     T = updatePosterior(IBD_count_by_bin, bins, maxGen, N)
+    tmp = np.apply_along_axis(logsumexp, 0, T)
+    print(np.exp(tmp))
     plotPosterior(np.exp(T), bins, np.arange(1, maxGen+1), title=f'Posterior Distribution for Iteration {numIter}')    
     sys.exit()
     N = updateN(T, IBD_count_by_bin, bins, maxGen, alpha)
