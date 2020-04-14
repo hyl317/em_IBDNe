@@ -7,7 +7,7 @@
 ##SBATCH --nodelist=cbsubscb09
 ##SBATCH --chdir=/fs/cbsubscb09/storage/yilei/simulate/chrom
 #SBATCH --job-name=ibdne_likelihood
-#SBATCH --output=ibdne.likelihood.BFGS.diff1.out.%j
+#SBATCH --output=ibdne.likelihood.BFGS.diff2.out.%j
 ##SBATCH --array=1-22
 #SBATCH --mail-user=yh362@cornell.edu
 #SBATCH --mail-type=ALL

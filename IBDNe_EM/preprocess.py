@@ -87,10 +87,10 @@ def processIBDandBinning(ibd_gz, end_marker):
     for chr, start_end in endMarker_cM.items():
         total_genome_length += abs(start_end[1]-start_end[0])
 
-    interval1 = np.arange(2,4,0.05)
-    interval2 = np.arange(4,6,0.1)
-    interval3 = np.arange(6,10,0.5)
-    interval4 = np.append(np.arange(10,100,10), 100)
+    interval1 = np.arange(2,6,0.05)
+    interval2 = np.arange(6,8,0.1)
+    interval3 = np.arange(8,10,0.25)
+    interval4 = np.append(np.arange(10,100,5), 100)
     bins = np.concatenate((interval1, interval2, interval3, interval4))
 
     IBD_count_censored = np.zeros(len(bins))

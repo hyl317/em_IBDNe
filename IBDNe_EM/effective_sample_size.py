@@ -24,7 +24,7 @@ def neg_loglikelihood(N, N_eff, mean_IBD_count, total_genome_length, bins, alpha
     cumulative_expected_IBD_count = [expectation_num_segment(N, b, total_genome_length) for b in bins]
     expected_IBD_count = cumulative_expected_IBD_count - shift(cumulative_expected_IBD_count, -1, cval=0)
     loglike = np.sum(N_eff*(mean_IBD_count*np.log(expected_IBD_count)-expected_IBD_count))
-    penalty = alpha*np.sum(np.diff(N, n=1)**2)
+    penalty = alpha*np.sum(np.diff(N, n=2)**2)
     return 1e2*(-loglike + penalty)
 
 def fit_mle_N(N_eff, mean_IBD_count, total_genome_length, bins, G, alpha):
@@ -152,7 +152,7 @@ def main():
     parser.add_argument('-e', action='store', dest='end', type=str, required=True, help="path to files of end markers")
     parser.add_argument('-n', action="store", dest='n', type=int, required=True, help="number of haplotypes")
     parser.add_argument('-G', action='store', dest='G', type=int, required=False, default=200, help='maximum number of generations to infer')
-    parser.add_argument('--alpha', action='store', dest='alpha', type=float, required=False, default=0.01, help='alpha')
+    parser.add_argument('--alpha', action='store', dest='alpha', type=float, required=False, default=0.001, help='alpha')
     parser.add_argument('--bins', action="store", dest='bins', type=str, required=False)
     parser.add_argument('-N', action="store", dest="N", type=str, required=False, help="path to file containing reference population size")
     args = parser.parse_args()
