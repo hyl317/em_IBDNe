@@ -72,12 +72,11 @@ def log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, maxGen, n_p):
         part1 = (g-maxGen-1)*np.log(1-1/(2*N_g))
         return np.exp(part1 + part2 + np.log(part3))
     N_past = N[-1]
-    integral, err = quad(partB, maxGen+1, np.inf, args=(N_past, maxGen, C, chr_len_cM))
+    integral1, err1 = quad(partB, maxGen+1, np.inf, args=(N_past, maxGen, C, chr_len_cM))
+    integral2, err2 = quad(partB, maxGen, np.inf, args=(N_past, maxGen, C, chr_len_cM))
     #print(f'N={N}')
     #print(f'evaluated at N_g={N_past} and the integral is {integral}')
-    return np.log(n_p) - np.log(2*N_past) + np.sum(np.log(1-1/(2*N))) + np.log(integral)
-
-
+    return np.log(n_p) - np.log(2*N_past) + np.sum(np.log(1-1/(2*N))) + np.log((integral1 + integral2)/2)
 
 
 def loss_func(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
@@ -142,33 +141,33 @@ def jacobian(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
     return chi2_term + alpha*penalty_term
 
 
-def testExpectation(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2):
-    N1 = initializeN_Uniform(maxGen, 10000)
-    N2 = initializeN_Uniform(maxGen, 1000)
-    N3 = initializeN_Uniform(maxGen, 100)
-    T1_1, T2_1 = updatePosterior(N1, bin1, bin2, bin_midPoint1, bin_midPoint2)
-    T1_2, T2_2 = updatePosterior(N2, bin1, bin2, bin_midPoint1, bin_midPoint2)
-    T1_3, T2_3 = updatePosterior(N3, bin1, bin2, bin_midPoint1, bin_midPoint2)
-    print(T1_1.shape)
-    print(np.exp(T1_1.T))
-    print(np.exp(T1_2.T))
-    print(np.exp(T1_3.T))
+#def testExpectation(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2):
+#    N1 = initializeN_Uniform(maxGen, 10000)
+#    N2 = initializeN_Uniform(maxGen, 1000)
+#    N3 = initializeN_Uniform(maxGen, 100)
+#    T1_1, T2_1 = updatePosterior(N1, bin1, bin2, bin_midPoint1, bin_midPoint2)
+#    T1_2, T2_2 = updatePosterior(N2, bin1, bin2, bin_midPoint1, bin_midPoint2)
+#    T1_3, T2_3 = updatePosterior(N3, bin1, bin2, bin_midPoint1, bin_midPoint2)
+#    print(T1_1.shape)
+#    print(np.exp(T1_1.T))
+#    print(np.exp(T1_2.T))
+#    print(np.exp(T1_3.T))
 
 
-#test gradient calculation for loss_func in EMbyMoment.py
-def gradientChecker(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
-    delta = 1e-6
-    maxGen = N.size
-    calculated = jacobian(N, log_obs, log_term3, n_p, alpha, chr_len_cM)
-    gradient = np.zeros(maxGen)
-    for g in np.arange(maxGen):
-        #print(np.eye(maxGen)[g])
-        upper, lower = loss_func(N + delta*np.eye(maxGen)[g], log_obs, log_term3, n_p, alpha, chr_len_cM), loss_func(N - delta*np.eye(maxGen)[g], log_obs, log_term3, n_p, alpha, chr_len_cM)
-        gradient[g] = (upper - lower)/(2*delta)
-        print(f'diff between up and low: {upper-lower}')
-    print(f'calculated gradient is: {calculated}')
-    print(f'approximated gradient is: {gradient}')
-    sys.exit()
+##test gradient calculation for loss_func in EMbyMoment.py
+#def gradientChecker(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
+#    delta = 1e-6
+#    maxGen = N.size
+#    calculated = jacobian(N, log_obs, log_term3, n_p, alpha, chr_len_cM)
+#    gradient = np.zeros(maxGen)
+#    for g in np.arange(maxGen):
+#        #print(np.eye(maxGen)[g])
+#        upper, lower = loss_func(N + delta*np.eye(maxGen)[g], log_obs, log_term3, n_p, alpha, chr_len_cM), loss_func(N - delta*np.eye(maxGen)[g], log_obs, log_term3, n_p, alpha, chr_len_cM)
+#        gradient[g] = (upper - lower)/(2*delta)
+#        print(f'diff between up and low: {upper-lower}')
+#    print(f'calculated gradient is: {calculated}')
+#    print(f'approximated gradient is: {gradient}')
+#    sys.exit()
 
 
 def em_moment_tail(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, alpha, tol, maxIter):
