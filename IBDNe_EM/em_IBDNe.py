@@ -37,14 +37,14 @@ def main():
 
     with open(f'{args.out}.ne.txt','w') as out:
         for g, ne in enumerate(N):
-            out.write(f'{g+1}\t{ne}\n')
+            out.write(f'{g+1}\t{round(ne, 2)}\n')
 
     with open(f'{args.out}.tmrca.txt','w') as out_tmrca:
-        out_tmrca.write(f'#{median_bin_length(cM)}\t{mean_posterior_tmrca}\n')
-        tmp = np.arange(1, args.maxGen+1) + T1[:, :-1]
+        out_tmrca.write('#median_bin_length(cM)\tmean_posterior_tmrca\n')
+        tmp = np.log(np.arange(1, args.maxGen+1)) + T1[:, :-1]
         posterior_expectation_tmrca = np.exp(np.apply_along_axis(logsumexp, 1, tmp))
         for bin_median, tmrca in zip(bin_midPoint1, posterior_expectation_tmrca):
-            out_tmrca.write(f'{round(bin_median,2)}\t{round(tmrca,2)}\n')
+            out_tmrca.write(f'{round(bin_median,3)}\t{round(tmrca,2)}\n')
 
 
 if __name__ == '__main__':
