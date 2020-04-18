@@ -39,12 +39,14 @@ def main():
         for g, ne in enumerate(N):
             out.write(f'{g+1}\t{round(ne, 2)}\n')
 
+    cutoff = 7
     with open(f'{args.out}.tmrca.txt','w') as out_tmrca:
-        out_tmrca.write('#median_bin_length(cM)\tmean_posterior_tmrca\n')
+        out_tmrca.write(f'#median_bin_length(cM)\tmean_posterior_tmrca\tprobability_coalesce_within_{cutoff}_generation\n')
         tmp = np.log(np.arange(1, args.maxGen+1)) + T1[:, :-1]
         posterior_expectation_tmrca = np.exp(np.apply_along_axis(logsumexp, 1, tmp))
-        for bin_median, tmrca in zip(bin_midPoint1, posterior_expectation_tmrca):
-            out_tmrca.write(f'{round(bin_median,3)}\t{round(tmrca,2)}\n')
+        prob_coalesce_within_cutoff = np.exp(np.apply_along_axis(logsumexp, 1, T1[:,:cutoff]))
+        for bin_median, tmrca, prob in zip(bin_midPoint1, posterior_expectation_tmrca, prob_coalesce_within_cutoff):
+            out_tmrca.write(f'{round(bin_median,3)}\t{round(tmrca,2)}\t{prob}\n')
 
 
 if __name__ == '__main__':
