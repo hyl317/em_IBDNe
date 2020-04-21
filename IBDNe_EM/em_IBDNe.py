@@ -39,7 +39,7 @@ def main():
         for g, ne in enumerate(N):
             out.write(f'{g+1}\t{round(ne, 2)}\n')
 
-    cutoff = 7
+    cutoff = 10
     with open(f'{args.out}.tmrca.txt','w') as out_tmrca:
         out_tmrca.write(f'#median_bin_length(cM)\tmean_posterior_tmrca\tprobability_coalesce_within_{cutoff}_generation\n')
         tmp = np.log(np.arange(1, args.maxGen+1)) + T1[:, :-1]
