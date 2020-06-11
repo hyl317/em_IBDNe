@@ -63,7 +63,7 @@ def processIBD(ibd_gz, end_marker):
     for chr, start_end in endMarker_cM.items():
         chr_len_cM.append(abs(start_end[1]-start_end[0]))
 
-    return bin1, bin2, bin_midPoint1, bin_midPoint2, np.array(chr_len_cM), len(inds)
+    return bin1, bin2, bin_midPoint1, bin_midPoint2, np.array(chr_len_cM)
 
 
 def processIBDandBinning(ibd_gz, end_marker):
