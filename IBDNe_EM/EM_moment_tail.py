@@ -5,11 +5,12 @@ from misc import *
 from scipy.optimize import minimize
 from scipy.ndimage.interpolation import shift
 from scipy.integrate import quad
+from numba import jit
 import sys
 
 C = 2
 
-
+@jit
 def updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))
@@ -45,7 +46,7 @@ def updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     T2 = T2 - normalizing_constant2
     return T1, T2
 
-
+@jit
 def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha, chr_len_cM):
     log_total_len_each_bin1 = np.log(bin1) + np.log(bin_midPoint1)
     log_total_len_each_bin2 = np.log(bin2) + np.log(bin_midPoint2)
@@ -65,6 +66,7 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     print(result, flush=True)
     return result.x
 
+@jit
 def log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, maxGen, n_p):
     def partB(g, N_g, maxGen, C, chromLen):
         part3 = np.sum((C*g/50 + 1)*chromLen) - len(chromLen)*(C**2)*g/50
@@ -78,7 +80,7 @@ def log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, maxGen, n_p):
     #print(f'evaluated at N_g={N_past} and the integral is {integral}')
     return np.log(n_p) - np.log(2*N_past) + np.sum(np.log(1-1/(2*N))) + np.log((integral1 + integral2)/2)
 
-
+@jit
 def loss_func(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
     G = len(N)
     gen = np.arange(1, G+1)
@@ -89,7 +91,7 @@ def loss_func(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
     diff_obs_expectation = np.exp(log_obs) - np.exp(log_expectation)
     return np.sum(diff_obs_expectation**2/np.exp(log_obs)) + penalty
 
-
+@jit
 def jacobian(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
     maxGen = len(N)
     jacMatrix = np.zeros((maxGen, maxGen))
