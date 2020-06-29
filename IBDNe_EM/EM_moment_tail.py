@@ -57,10 +57,10 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
 
     #a penalized optimization approach
     #gradientChecker(N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha, chr_len_cM)
-    bnds = [(1000, 10000000) for n in N]
+    bnds = [(1000, 1000000) for n in N]
     result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha, chr_len_cM), 
                       method='L-BFGS-B', bounds=bnds, jac=jacobian)
-    print(result, flush=True)
+    #print(result, flush=True)
     return result.x
 
 def log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, maxGen, n_p):
@@ -166,9 +166,9 @@ def jacobian(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
 #    sys.exit()
 
 
-def em_moment_tail(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, alpha, tol, maxIter):
-    N = initializeN_autoreg(maxGen)
-    #N = initializeN_Uniform(maxGen, 20000)
+def em_moment_tail(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, alpha, tol, maxIter, N=None):
+    if not N:
+        N = initializeN_autoreg(maxGen)
     print(f"initial N:{N}", flush=True)
 
     #pre-calculate log of term3 in the updateN step
@@ -199,6 +199,6 @@ def em_moment_tail(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM,
         num_iter += 1
     
     print(f'iteration{num_iter} done. Diff: {dist}', flush=True)
-    plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+1), title=f'Posterior Distribution for Iteration {num_iter}')    
+    #plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+1), title=f'Posterior Distribution for Iteration {num_iter}')    
     return N, T1, T2
 

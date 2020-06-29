@@ -1,5 +1,6 @@
 #main driver script
 import argparse
+import sys
 import numpy as np
 from scipy.special import logsumexp
 from EM import *
@@ -38,6 +39,7 @@ def main():
         bin_midPoint2, chr_len_cM, args.numInds, args.alpha, args.tol, args.maxIter)
 
     with open(f'{args.out}.ne.txt','w') as out:
+        out.write(f'#{" ".join(sys.argv[1:])}\n')
         for g, ne in enumerate(N):
             out.write(f'{g+1}\t{round(ne, 2)}\n')
 
