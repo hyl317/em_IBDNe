@@ -8,6 +8,7 @@ from scipy.integrate import quad
 import sys
 import random
 import itertools
+import logging
 from collections import Counter
 
 C = 2
@@ -54,30 +55,43 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     log_expected_ibd_len_each_gen2 = np.apply_along_axis(logsumexp, 0, T2 + log_total_len_each_bin2[:,np.newaxis])
     log_total_expected_ibd_len_each_gen = np.logaddexp(log_expected_ibd_len_each_gen1, log_expected_ibd_len_each_gen2)
 
-    gen = np.arange(1, maxGen+1)
-    sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
-    log_numerator = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
+    #gen = np.arange(1, maxGen+1)
+    #sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
+    #log_numerator = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
 
     #a penalized optimization approach
     #gradientChecker(N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha, chr_len_cM)
     bnds = [(1000, 1000000) for n in N]
     result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha, chr_len_cM), 
                       method='L-BFGS-B', bounds=bnds, jac=jacobian)
-    #print(result, flush=True)
-    return result.x
+    logging.debug(result)
+    return result.x, result.fun
 
-def log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, maxGen, n_p):
-    def partB(g, N_g, maxGen, C, chromLen):
-        part3 = np.sum((C*g/50 + 1)*chromLen) - len(chromLen)*(C**2)*g/50
-        part2 = -C*g/50
-        part1 = (g-maxGen-1)*np.log(1-1/(2*N_g))
-        return np.exp(part1 + part2 + np.log(part3))
+# def log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, maxGen, n_p):
+#     def partB(g, N_g, maxGen, C, chromLen):
+#         part3 = np.sum((C*g/50 + 1)*chromLen) - len(chromLen)*(C**2)*g/50
+#         part2 = -C*g/50
+#         part1 = (g-maxGen-1)*np.log(1-1/(2*N_g))
+#         return np.exp(part1 + part2 + np.log(part3))
+#     N_past = N[-1]
+#     integral1, err1 = quad(partB, maxGen+1, np.inf, args=(N_past, maxGen, C, chr_len_cM))
+#     #integral2, err2 = quad(partB, maxGen, np.inf, args=(N_past, maxGen, C, chr_len_cM))
+#     #return np.log(n_p) - np.log(2*N_past) + np.sum(np.log(1-1/(2*N))) + np.log((integral1 + integral2)/2)
+#     return np.log(n_p) - np.log(2*N_past) + np.sum(np.log(1-1/(2*N))) + np.log(integral1)
+
+def log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, G, n_p):
+    total_genome = np.sum(chr_len_cM)
+    num_chrs = len(chr_len_cM)
     N_past = N[-1]
-    integral1, err1 = quad(partB, maxGen+1, np.inf, args=(N_past, maxGen, C, chr_len_cM))
-    integral2, err2 = quad(partB, maxGen, np.inf, args=(N_past, maxGen, C, chr_len_cM))
-    #print(f'N={N}')
-    #print(f'evaluated at N_g={N_past} and the integral is {integral}')
-    return np.log(n_p) - np.log(2*N_past) + np.sum(np.log(1-1/(2*N))) + np.log((integral1 + integral2)/2)
+    alpha = np.log(1-1/(2*N_past)) - C/50
+    log_part_A = np.log(total_genome) + (G+1)*np.log((2*N_past)/(2*N_past-1)) + \
+            alpha*(G+1) - np.log(1-np.exp(alpha))
+    D = (C/50)*total_genome - C**2*num_chrs/50
+    log_part_B = np.log(D) + (G+1)*np.log((2*N_past)/(2*N_past-1)) + alpha*(G+1) + \
+            np.log(1+G*(1-np.exp(alpha))) - 2*np.log(1-np.exp(alpha))
+
+    return np.log(n_p) + np.sum(np.log(1-1/(2*N))) - np.log(2*N_past) + np.logaddexp(log_part_A, log_part_B)
+
 
 def loss_func(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
     G = len(N)
@@ -88,6 +102,16 @@ def loss_func(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
     penalty = alpha*np.sum(np.diff(N, n=2)**2)
     diff_obs_expectation = np.exp(log_obs) - np.exp(log_expectation)
     return np.sum(diff_obs_expectation**2/np.exp(log_obs)) + penalty
+
+# def calc_init_loss(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, \
+#             n_p, log_term3, N, alpha, chr_len_cM):
+#     log_total_len_each_bin1 = np.log(bin1) + np.log(bin_midPoint1)
+#     log_total_len_each_bin2 = np.log(bin2) + np.log(bin_midPoint2)
+#     log_expected_ibd_len_each_gen1 = np.apply_along_axis(logsumexp, 0, T1 + log_total_len_each_bin1[:,np.newaxis])
+#     log_expected_ibd_len_each_gen2 = np.apply_along_axis(logsumexp, 0, T2 + log_total_len_each_bin2[:,np.newaxis])
+#     log_total_expected_ibd_len_each_gen = np.logaddexp(log_expected_ibd_len_each_gen1, log_expected_ibd_len_each_gen2)
+#     return loss_func(N, log_obs, log_term3, n_p, alpha, chr_len_cM)    
+
 
 def jacobian(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
     maxGen = len(N)
@@ -183,25 +207,21 @@ def em_moment_tail(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM,
     log_term3 = np.log(np.sum(C*(chr_len_cM@gen)/50 + chr_len_cM - ((C**2)*gen)/50, axis=0))
 
     #data preprocessing done. Start EM.
-    N_prev = N
     T1, T2 = updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2)
-    N = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha, chr_len_cM)
-    N_curr = N
+    N, fun = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha, chr_len_cM)
     num_iter = 1
-    diff = N_curr - N_prev
-    dist = diff.dot(diff)/maxGen
+    diff = np.inf
+    fun_prev = fun
 
-    while ( dist >= tol and num_iter < maxIter):
-        print(f'iteration{num_iter} done. Diff: {dist}', flush=True)
-        N_prev = N_curr
+    while ( diff >= tol and num_iter < maxIter):
+        logging.info(f'iteration{num_iter} done. Diff: {diff}')
         T1, T2 = updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2)
-        N = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha, chr_len_cM)
-        N_curr = N
-        diff = N_curr - N_prev
-        dist = diff.dot(diff)/maxGen
+        N, fun = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha, chr_len_cM)
+        diff = abs(fun - fun_prev)
+        fun_prev = fun
         num_iter += 1
     
-    print(f'iteration{num_iter} done. Diff: {dist}', flush=True)
+    logging.info(f'iteration{num_iter} done. Diff: {diff}')
     return N
 
 def bootstrap(inds, ibdseg_map1, ibdseg_map2, maxGen, chr_len_cM, num_Inds, alpha, tol, maxIter, N_init):
