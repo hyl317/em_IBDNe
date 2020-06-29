@@ -169,18 +169,23 @@ def processIBD(ibd_gz, end_marker, mapFile=None):
 
     ibdLen1 = [] #store length of IBDs that reside in the middle of a chromosome
     ibdLen2 = [] #store length of IBDs that reaches either end of a chromosome
+    ibdseg_map1 = defaultdict(lambda: defaultdict(lambda: []))
+    ibdseg_map2 = defaultdict(lambda: defaultdict(lambda: []))
     inds = set()
     with gzip.open(ibd_gz, 'rt') as ibd:
         line = ibd.readline()
         while line:
             ind1, hap1, ind2, hap2, chr, start_bp, end_bp, len_cM = line.strip().split('\t')
             chr, start_bp, end_bp, len_cM = int(chr), int(start_bp), int(end_bp), float(len_cM)
+            ind1, ind2 = min(ind1, ind2), max(ind1, ind2)
             inds.add(ind1)
             inds.add(ind2)
             if start_bp in endMarker_bp[chr] or end_bp in endMarker_bp[chr]:
                 ibdLen2.append(len_cM)
+                ibdseg_map2[ind1][ind2].append(len_cM)
             else:
                 ibdLen1.append(len_cM)
+                ibdseg_map1[ind1][ind2].append(len_cM)
             line = ibd.readline()
 
     #calculate bins
@@ -192,7 +197,7 @@ def processIBD(ibd_gz, end_marker, mapFile=None):
     for chr, start_end in endMarker_cM.items():
         chr_len_cM.append(abs(start_end[1]-start_end[0]))
 
-    return bin1, bin2, bin_midPoint1, bin_midPoint2, np.array(chr_len_cM)
+    return bin1, bin2, bin_midPoint1, bin_midPoint2, np.array(chr_len_cM), inds, ibdseg_map1, ibdseg_map2
 
 
 # def processIBDandBinning(ibd_gz, end_marker):

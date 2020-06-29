@@ -2,13 +2,10 @@
 import argparse
 import sys
 import numpy as np
-from scipy.special import logsumexp
-from EM import *
-from EM_moment import *
+import math
+from concurrent import futures
 from EM_moment_tail import *
-from plotting import *
 from preprocess import *
-from EM_by_count import *
 
 def main():
     parser = argparse.ArgumentParser(description='IBDNe with Composite Likeilhood and EM.')
@@ -29,28 +26,54 @@ def main():
                         help="Maximum number of iterations for EM. Default: 150")
     parser.add_argument('-o', action="store", dest="out", type=str, required=False, default='ibdne',
                         help="name of output file. Default: ibdne.txt")
+    parser.add_argument('--boot', action="store_true", help="Perform bootstrap. Default false.")
+    parser.add_argument('-b', action="store", type=int, required=False, default=80,
+                    help='number of bootstrap to perform. Default: 80.')
     
     args = parser.parse_args()
 
-    bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM = processIBD(args.ibdSeg, args.end)
+    print(f'reading ibd segments from {args.ibdSeg}', flush=True)
+    bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, inds, ibdseg_map1, ibdseg_map2 = processIBD(args.ibdSeg, args.end)
     print(f'A total of {np.sum(bin1) + np.sum(bin2)} IBD segments read for {args.numInds} individuals.', flush=True)
     print(f'Among them, {np.sum(bin2)} reach chromosome end.', flush=True)
-    N, T1, T2 = em_moment_tail(args.maxGen, bin1, bin2, bin_midPoint1, \
+    N = em_moment_tail(args.maxGen, bin1, bin2, bin_midPoint1, \
         bin_midPoint2, chr_len_cM, args.numInds, args.alpha, args.tol, args.maxIter)
 
-    with open(f'{args.out}.ne.txt','w') as out:
+    print(f'fitted pop size history: {N}')
+    
+    if not args.boot:
+        with open(f'{args.out}.ne.txt','w') as out:
         out.write(f'#{" ".join(sys.argv[1:])}\n')
         for g, ne in enumerate(N):
             out.write(f'{g+1}\t{round(ne, 2)}\n')
+    else:
+        #start bootstrapping
+        
+        print('start bootstrapping', flush=True)
+        bootstrapped = np.zeros((args.b, args.maxGen))
+        with futures.ProcessPoolExecutor() as executor:
+            future_list = []
+            for i in range(args.b):
+                future = executor.submit(bootstrap, inds, ibdseg_map1, ibdseg_map2, \
+                    args.maxGen, chr_len_cM, args.numInds, args.alpha, args.tol, args.maxIter, N)
+                future_list.append(future)
+            done_iter = futures.as_completed(future_list)
+            for j, future in enumerate(done_iter):
+                try:
+                    N_boot = future.result()
+                except Exception as e:
+                    print(e)
+                bootstrapped[j, ] = N_boot
 
-    # cutoff = 10
-    # with open(f'{args.out}.tmrca.txt','w') as out_tmrca:
-    #     out_tmrca.write(f'#median_bin_length(cM)\tmean_posterior_tmrca\tprobability_coalesce_within_{cutoff}_generation\n')
-    #     tmp = np.log(np.arange(1, args.maxGen+1)) + T1[:, :-1]
-    #     posterior_expectation_tmrca = np.exp(np.apply_along_axis(logsumexp, 1, tmp))
-    #     prob_coalesce_within_cutoff = np.exp(np.apply_along_axis(logsumexp, 1, T1[:,:cutoff]))
-    #     for bin_median, tmrca, prob in zip(bin_midPoint1, posterior_expectation_tmrca, prob_coalesce_within_cutoff):
-    #         out_tmrca.write(f'{round(bin_median,3)}\t{round(tmrca,2)}\t{prob}\n')
+        np.matrix.sort(bootstrapped) #sort by column
+        lower_CI_index = math.floor(0.025*args.b)-1
+        upper_CI_index = math.floor(0.975*args.b)-1
+
+        with open(f'{args.out}.ne.txt','w') as out:
+            out.write(f'#{" ".join(sys.argv[1:])}\n')
+            out.write('#generation\tlower_CI\testimate\tupper_CI\n')
+            for g, ne in enumerate(N):
+                out.write(f'{g+1}\t{round(bootstrapped[lower_CI_index, g])}\t{round(ne, 2)}\t{bootstrapped[upper_CI_index, g]}\n')
 
 
 if __name__ == '__main__':

@@ -1,11 +1,14 @@
 from scipy.special import logsumexp
 import numpy as np
-from plotting import *
 from misc import *
+from preprocess import *
 from scipy.optimize import minimize
 from scipy.ndimage.interpolation import shift
 from scipy.integrate import quad
 import sys
+import random
+import itertools
+from collections import Counter
 
 C = 2
 
@@ -169,7 +172,7 @@ def jacobian(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
 def em_moment_tail(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, alpha, tol, maxIter, N=None):
     if not N:
         N = initializeN_autoreg(maxGen)
-    print(f"initial N:{N}", flush=True)
+    #print(f"initial N:{N}", flush=True)
 
     #pre-calculate log of term3 in the updateN step
     #this quantity is a constant in all iterations
@@ -199,6 +202,26 @@ def em_moment_tail(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM,
         num_iter += 1
     
     print(f'iteration{num_iter} done. Diff: {dist}', flush=True)
-    #plotPosterior(np.exp(T1.T), bin_midPoint1, np.arange(1, maxGen+1), title=f'Posterior Distribution for Iteration {num_iter}')    
-    return N, T1, T2
+    return N
+
+def bootstrap(inds, ibdseg_map1, ibdseg_map2, maxGen, chr_len_cM, num_Inds, alpha, tol, maxIter, N_init):
+    ibdLen1 = []
+    ibdLen2 = []
+
+    resampled_inds = random.choices(list(inds), k=num_Inds)
+    ct = Counter(resampled_inds)
+    for ind1, ind2 in itertools.combinations(ct.keys(), 2):
+        ind1, ind2 = min(ind1, ind2), max(ind1, ind2)
+        mult = ct[ind1]*ct[ind2]
+        for seg in ibdseg_map1[ind1][ind2]:
+            ibdLen1.extend([seg]*mult)
+        for seg in ibdseg_map2[ind1][ind2]:
+            ibdLen2.extend([seg]*mult)
+    
+    bin1, bin_midPoint1 = binning(ibdLen1)
+    bin2, bin_midPoint2 = binning(ibdLen2)
+    N = em_moment_tail(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, \
+            chr_len_cM, numInds, alpha, tol, maxIter/2, N_init)
+    return N
+
 
