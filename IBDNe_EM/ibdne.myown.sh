@@ -21,4 +21,4 @@ if [ ! -d /fs/cbsubscb09/storage/yilei/simulate/chrom ]; then
   /programs/bin/labutils/mount_server cbsubscb09 /storage
 fi
 
-python3 em_IBDNe.py -i /fs/cbsubscb09/storage/yilei/simulate/MS_ALL/MS.fin.vcf/FIN.MS.unr.ibd.gz -e /fs/cbsubscb09/storage/yilei/simulate/MS_ALL/MS.fin.vcf/endMarker.MS.fin --alpha 0.025 -o fin.MS.300 --max_iter 100 -G 200 -n 535
+python em_IBDNe.py -i /fs/cbsubscb09/storage/yilei/simulate/MS_ALL/MS.fin.vcf/FIN.MS.unr.str.ibd.gz -e /fs/cbsubscb09/storage/yilei/simulate/MS_ALL/MS.fin.vcf/endMarker.MS.fin --alpha 0.001 -o fin.MS.200.str --max_iter 250 -G 200 -n 535 --minIBD 2.5

@@ -102,14 +102,14 @@ def binning(ibdLenList):
     bin_midPoint_trimmed = bin_midPoint[bins != 0]
     return bins_trimmed, bin_midPoint_trimmed 
 
-def processIBD(ibd_gz, end_marker, mapFile=None):
+def processIBD(ibd_gz, end_marker, minIBD, mapFile=None):
     endMarker_bp = defaultdict(lambda : [])
     endMarker_cM = defaultdict(lambda : [])
 
     with open(end_marker) as end:
         line = end.readline()
         while line:
-            chr, rate, cM, phy = line.strip().split('\t')
+            chr, rate, cM, phy, *_ = line.strip().split('\t')
             chr, cM, phy = int(chr), float(cM), int(phy)
             endMarker_bp[chr].append(phy)
             endMarker_cM[chr].append(cM)
@@ -174,10 +174,11 @@ def processIBD(ibd_gz, end_marker, mapFile=None):
     ibdseg_map2 = defaultdict(lambda: defaultdict(lambda: []))
     inds = set()
     with gzip.open(ibd_gz, 'rt') as ibd:
-        line = ibd.readline()
-        while line:
+        for line in ibd:
             ind1, hap1, ind2, hap2, chr, start_bp, end_bp, len_cM = line.strip().split('\t')
             chr, start_bp, end_bp, len_cM = int(chr), int(start_bp), int(end_bp), float(len_cM)
+            if len_cM < minIBD:
+                continue
             ind1, ind2 = min(ind1, ind2), max(ind1, ind2)
             inds.add(ind1)
             inds.add(ind2)
@@ -187,7 +188,6 @@ def processIBD(ibd_gz, end_marker, mapFile=None):
             else:
                 ibdLen1.append(len_cM)
                 ibdseg_map1[ind1][ind2].append(len_cM)
-            line = ibd.readline()
 
     #calculate bins
     bin1, bin_midPoint1 = binning(ibdLen1)
@@ -197,6 +197,9 @@ def processIBD(ibd_gz, end_marker, mapFile=None):
     chr_len_cM = []
     for chr, start_end in endMarker_cM.items():
         chr_len_cM.append(abs(start_end[1]-start_end[0]))
+    
+    print(f'bin1: {bin1[:20]}')
+    print(f'bin2: {bin2[:20]}')
 
     return bin1, bin2, bin_midPoint1, bin_midPoint2, np.array(chr_len_cM), inds, ibdseg_map1, ibdseg_map2
 

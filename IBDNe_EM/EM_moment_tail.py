@@ -11,8 +11,6 @@ import itertools
 import logging
 from collections import Counter
 
-C = 2
-
 def updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))
@@ -24,7 +22,7 @@ def updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     temp1 = 1-beta1*np.exp(-alpha1)
     last_col_1 = sum_log_prob_not_coalesce[-1] + np.log(1-beta1) - alpha1*(1 + G) - np.log(2500) + np.log(G**2/temp1 + (2*G-1)/temp1**2 + 2/temp1**3)
 
-    #calculate log probaability of coalescing earlier than maxGen for T2
+    #calculate log probability of coalescing earlier than maxGen for T2
     alpha2 = bin_midPoint2/50
     beta2 = 1-1/(2*N[-1])
     temp2 = 1-beta2*np.exp(-alpha2)
@@ -54,30 +52,12 @@ def updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_t
     log_expected_ibd_len_each_gen1 = np.apply_along_axis(logsumexp, 0, T1 + log_total_len_each_bin1[:,np.newaxis])
     log_expected_ibd_len_each_gen2 = np.apply_along_axis(logsumexp, 0, T2 + log_total_len_each_bin2[:,np.newaxis])
     log_total_expected_ibd_len_each_gen = np.logaddexp(log_expected_ibd_len_each_gen1, log_expected_ibd_len_each_gen2)
-
-    #gen = np.arange(1, maxGen+1)
-    #sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
-    #log_numerator = np.log(n_p) + sum_log_prob_not_coalesce + np.log(0.5) - C*gen/50 + log_term3
-
     #a penalized optimization approach
-    #gradientChecker(N, log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha, chr_len_cM)
     bnds = [(1000, 1000000) for n in N]
     result = minimize(loss_func, N, args=(log_total_expected_ibd_len_each_gen, log_term3, n_p, alpha, chr_len_cM), 
                       method='L-BFGS-B', bounds=bnds, jac=jacobian)
     logging.debug(result)
     return result.x, result.fun
-
-# def log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, maxGen, n_p):
-#     def partB(g, N_g, maxGen, C, chromLen):
-#         part3 = np.sum((C*g/50 + 1)*chromLen) - len(chromLen)*(C**2)*g/50
-#         part2 = -C*g/50
-#         part1 = (g-maxGen-1)*np.log(1-1/(2*N_g))
-#         return np.exp(part1 + part2 + np.log(part3))
-#     N_past = N[-1]
-#     integral1, err1 = quad(partB, maxGen+1, np.inf, args=(N_past, maxGen, C, chr_len_cM))
-#     #integral2, err2 = quad(partB, maxGen, np.inf, args=(N_past, maxGen, C, chr_len_cM))
-#     #return np.log(n_p) - np.log(2*N_past) + np.sum(np.log(1-1/(2*N))) + np.log((integral1 + integral2)/2)
-#     return np.log(n_p) - np.log(2*N_past) + np.sum(np.log(1-1/(2*N))) + np.log(integral1)
 
 def log_expectedIBD_beyond_maxGen_given_Ne(N, chr_len_cM, G, n_p):
     total_genome = np.sum(chr_len_cM)
@@ -122,7 +102,6 @@ def jacobian(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
     sum_log_prob_not_coalesce = np.cumsum(np.insert(np.log(1-1/(2*N)), 0, 0))[:-1]
     log_common_terms = np.log(n_p) + sum_log_prob_not_coalesce - C*gen/50 + log_term3
     np.fill_diagonal(jacMatrix, -np.exp(log_common_terms + np.log(0.5) -2*np.log(N)))
-
     #calculate lower triangular terms
     for g in range(2, maxGen+1):
         jacMatrix[g-1,:g-1] = np.exp(log_common_terms[g-1] - np.log(2*N[g-1]) - np.log(1-1/(2*N[:g-1])) 
@@ -142,7 +121,6 @@ def jacobian(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
 
     #append the last row to jaxMatrix
     jacMatrix = np.append(jacMatrix, expIBD_beyond_maxGen_derivative_to_N_t.reshape(1, maxGen), axis=0)
-
     #summing up
     log_expectation = np.full(maxGen+1, np.nan)
     log_expectation[:-1] = log_common_terms - np.log(2*N)
@@ -193,10 +171,13 @@ def jacobian(N, log_obs, log_term3, n_p, alpha, chr_len_cM):
 #    sys.exit()
 
 
-def em_moment_tail(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, numInds, alpha, tol, maxIter, N=None):
-    if not N:
-        N = initializeN_autoreg(maxGen)
-    #print(f"initial N:{N}", flush=True)
+def em_moment_tail(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM, \
+                        minIBD, numInds, alpha, tol, maxIter, N=None):
+    global C
+    C = minIBD
+    N = np.full(maxGen, 1e4)
+    #if not N:
+    #    N = initializeN_autoreg(maxGen)
 
     #pre-calculate log of term3 in the updateN step
     #this quantity is a constant in all iterations
@@ -205,7 +186,6 @@ def em_moment_tail(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM,
     chr_len_cM = chr_len_cM[:,np.newaxis]
     gen = np.arange(1, maxGen+1).reshape((1, maxGen))
     log_term3 = np.log(np.sum(C*(chr_len_cM@gen)/50 + chr_len_cM - ((C**2)*gen)/50, axis=0))
-
     #data preprocessing done. Start EM.
     T1, T2 = updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2)
     N, fun = updateN(maxGen, T1, T2, bin1, bin2, bin_midPoint1, bin_midPoint2, n_p, log_term3, N, alpha, chr_len_cM)
@@ -224,7 +204,7 @@ def em_moment_tail(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, chr_len_cM,
     logging.info(f'iteration{num_iter} done. Diff: {diff}')
     return N
 
-def bootstrap(inds, ibdseg_map1, ibdseg_map2, maxGen, chr_len_cM, num_Inds, alpha, tol, maxIter, N_init):
+def bootstrap(inds, ibdseg_map1, ibdseg_map2, maxGen, chr_len_cM, minIBD, num_Inds, alpha, tol, maxIter, N_init=None):
     ibdLen1 = []
     ibdLen2 = []
 
@@ -241,7 +221,7 @@ def bootstrap(inds, ibdseg_map1, ibdseg_map2, maxGen, chr_len_cM, num_Inds, alph
     bin1, bin_midPoint1 = binning(ibdLen1)
     bin2, bin_midPoint2 = binning(ibdLen2)
     N = em_moment_tail(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, \
-            chr_len_cM, numInds, alpha, tol, maxIter/2, N_init)
+            chr_len_cM, minIBD, numInds, alpha, tol, maxIter/2, N_init)
     return N
 
 
