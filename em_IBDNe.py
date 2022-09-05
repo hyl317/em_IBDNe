@@ -32,6 +32,7 @@ def main():
     parser.add_argument('--log', action="store", type=str, required=False, default='INFO', 
                         help='logging level. Default: INFO.\n Must be one of INFO, DEBUG, WARNING, ERROR, CRITICAL')
     parser.add_argument('--boot', action="store_true", help="Perform bootstrap. Default false.")
+    parser.add_argument('--nprocess', action="store", dest='nprocess', type=int, help="Number of processes to use when bootstrapping.")
     parser.add_argument('-b', action="store", type=int, required=False, default=80,
                     help='number of bootstrap to perform. Default: 80.')
     
@@ -61,19 +62,10 @@ def main():
         
         logging.info('start bootstrapping')
         bootstrapped = np.zeros((args.b, args.maxGen))
-        with futures.ProcessPoolExecutor() as executor:
-            future_list = {}
-            for i in range(args.b):
-                future = executor.submit(bootstrap, inds, ibdseg_map1, ibdseg_map2, \
-                    args.maxGen, chr_len_cM, args.minIBD, args.numInds, args.alpha, args.tol, args.maxIter)
-                future_list[future] = i
-            done_iter = futures.as_completed(future_list)
-            for future in done_iter:
-                try:
-                    N_boot = future.result()
-                except Exception as e:
-                    logging.exception(e)
-                bootstrapped[future_list[future], ] = N_boot
+        prms = [[inds, ibdseg_map1, ibdseg_map2, args.maxGen, chr_len_cM, args.minIBD, args.num_Inds, args.alpha, args.tol, args.maxIter] for i in range(args.b)]
+        results = multi_run(bootstrap, prms, processes=args.nprocess)
+        for i, result in enumerate(results):
+            bootstrapped[i] = result
 
         np.matrix.sort(bootstrapped) #sort by column
         logging.info('bootstrap finished')

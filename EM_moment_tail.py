@@ -10,6 +10,7 @@ import random
 import itertools
 import logging
 from collections import Counter
+import multiprocessing as mp
 
 def updatePosterior(N, bin1, bin2, bin_midPoint1, bin_midPoint2):
     #return updated T1 and T2
@@ -221,7 +222,26 @@ def bootstrap(inds, ibdseg_map1, ibdseg_map2, maxGen, chr_len_cM, minIBD, num_In
     bin1, bin_midPoint1 = binning(ibdLen1)
     bin2, bin_midPoint2 = binning(ibdLen2)
     N = em_moment_tail(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, \
-            chr_len_cM, minIBD, numInds, alpha, tol, maxIter/2, N_init)
+            chr_len_cM, minIBD, num_Inds, alpha, tol, maxIter/2, N_init)
     return N
 
-
+def multi_run(fun, prms, processes = 4, output=False):
+    """Implementation of running in Parallel.
+    fun: Function
+    prms: The Parameter Files
+    processes: How many Processes to use"""
+    if output:
+        print(f"Running {len(prms)} total jobs; {processes} in parallel.")
+    
+    if len(prms)>1:
+        if output:
+            print("Starting Pool of multiple workers...")    
+        with mp.Pool(processes = processes) as pool:
+            results = pool.starmap(fun, prms)
+    elif len(prms)==1:
+        if output:
+            print("Running single process...")
+        results = fun(*prms[0])
+    else:
+        raise RuntimeWarning("Nothing to run! Please check input.")
+    return results
