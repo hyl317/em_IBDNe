@@ -170,8 +170,8 @@ def processIBD(ibd_gz, end_marker, minIBD, mapFile=None):
 
     ibdLen1 = [] #store length of IBDs that reside in the middle of a chromosome
     ibdLen2 = [] #store length of IBDs that reaches either end of a chromosome
-    ibdseg_map1 = defaultdict(lambda: defaultdict(lambda: []))
-    ibdseg_map2 = defaultdict(lambda: defaultdict(lambda: []))
+    ibdseg_map1 = defaultdict(dict)
+    ibdseg_map2 = defaultdict(dict)
     inds = set()
     with gzip.open(ibd_gz, 'rt') as ibd:
         for line in ibd:
@@ -184,9 +184,13 @@ def processIBD(ibd_gz, end_marker, minIBD, mapFile=None):
             inds.add(ind2)
             if start_bp in endMarker_bp[chr] or end_bp in endMarker_bp[chr]:
                 ibdLen2.append(len_cM)
+                if not ind2 in ibdseg_map2[ind1]:
+                    ibdseg_map2[ind1][ind2] = []
                 ibdseg_map2[ind1][ind2].append(len_cM)
             else:
                 ibdLen1.append(len_cM)
+                if not ind2 in ibdseg_map1[ind1]:
+                    ibdseg_map1[ind1][ind2] = []
                 ibdseg_map1[ind1][ind2].append(len_cM)
 
     #calculate bins

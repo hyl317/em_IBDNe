@@ -222,7 +222,7 @@ def bootstrap(inds, ibdseg_map1, ibdseg_map2, maxGen, chr_len_cM, minIBD, num_In
     bin1, bin_midPoint1 = binning(ibdLen1)
     bin2, bin_midPoint2 = binning(ibdLen2)
     N = em_moment_tail(maxGen, bin1, bin2, bin_midPoint1, bin_midPoint2, \
-            chr_len_cM, minIBD, num_Inds, alpha, tol, maxIter/2, N_init)
+            chr_len_cM, minIBD, num_Inds, alpha, tol, maxIter, N_init)
     return N
 
 def multi_run(fun, prms, processes = 4, output=False):
