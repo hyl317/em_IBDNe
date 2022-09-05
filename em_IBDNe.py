@@ -62,7 +62,7 @@ def main():
         
         logging.info('start bootstrapping')
         bootstrapped = np.zeros((args.b, args.maxGen))
-        prms = [[inds, ibdseg_map1, ibdseg_map2, args.maxGen, chr_len_cM, args.minIBD, args.num_Inds, args.alpha, args.tol, args.maxIter] for i in range(args.b)]
+        prms = [[inds, ibdseg_map1, ibdseg_map2, args.maxGen, chr_len_cM, args.minIBD, args.numInds, args.alpha, args.tol, args.maxIter] for i in range(args.b)]
         results = multi_run(bootstrap, prms, processes=args.nprocess)
         for i, result in enumerate(results):
             bootstrapped[i] = result
