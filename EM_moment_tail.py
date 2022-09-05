@@ -214,10 +214,12 @@ def bootstrap(inds, ibdseg_map1, ibdseg_map2, maxGen, chr_len_cM, minIBD, num_In
     for ind1, ind2 in itertools.combinations(ct.keys(), 2):
         ind1, ind2 = min(ind1, ind2), max(ind1, ind2)
         mult = ct[ind1]*ct[ind2]
-        for seg in ibdseg_map1[ind1][ind2]:
-            ibdLen1.extend([seg]*mult)
-        for seg in ibdseg_map2[ind1][ind2]:
-            ibdLen2.extend([seg]*mult)
+        if ind2 in ibdseg_map1[ind1]:
+            for seg in ibdseg_map1[ind1][ind2]:
+                ibdLen1.extend([seg]*mult)
+        if ind2 in ibdseg_map2[ind1]:
+            for seg in ibdseg_map2[ind1][ind2]:
+                ibdLen2.extend([seg]*mult)
     
     bin1, bin_midPoint1 = binning(ibdLen1)
     bin2, bin_midPoint2 = binning(ibdLen2)
