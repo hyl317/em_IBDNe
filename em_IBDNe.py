@@ -67,7 +67,7 @@ def main():
         for i, result in enumerate(results):
             bootstrapped[i] = result
 
-        np.matrix.sort(bootstrapped) #sort by column
+        np.matrix.sort(bootstrapped, axis=0) #sort by column
         logging.info('bootstrap finished')
         logging.debug(bootstrapped)
         lower_CI_index = math.floor(0.025*args.b)-1
